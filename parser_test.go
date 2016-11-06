@@ -3,7 +3,7 @@ package jepl_test
 import (
 	"encoding/json"
 	"fmt"
-	"jepl"
+	"github.com/chenyoufu/jepl"
 	"reflect"
 	"regexp"
 	"strings"

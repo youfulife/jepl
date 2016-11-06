@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"jepl"
+	"github.com/chenyoufu/jepl"
 )
 
 // errstring converts an error to its string representation.

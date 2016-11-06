@@ -1,7 +1,7 @@
 package jepl_test
 
 import (
-	"jepl"
+	"github.com/chenyoufu/jepl"
 	"reflect"
 	"strings"
 	"testing"
