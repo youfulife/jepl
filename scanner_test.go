@@ -28,6 +28,8 @@ func TestScanner_Scan(t *testing.T) {
 		{s: ``, tok: jepl.EOF},
 		{s: `#`, tok: jepl.ILLEGAL, lit: `#`},
 		{s: ` `, tok: jepl.WS, lit: " "},
+		{s: `$`, tok: jepl.BOUNDPARAM, lit: "$"},
+		{s: `$1`, tok: jepl.BOUNDPARAM, lit: "$1"},
 		{s: "\t", tok: jepl.WS, lit: "\t"},
 		{s: "\n", tok: jepl.WS, lit: "\n"},
 		{s: "\r", tok: jepl.WS, lit: "\n"},
@@ -48,7 +50,6 @@ func TestScanner_Scan(t *testing.T) {
 		{s: `and`, tok: jepl.AND},
 		{s: `OR`, tok: jepl.OR},
 		{s: `or`, tok: jepl.OR},
-		{s: `$`, tok: jepl.BOUNDPARAM},
 
 		{s: `=`, tok: jepl.EQ},
 		{s: `!=`, tok: jepl.NEQ},
