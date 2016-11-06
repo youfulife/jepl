@@ -401,9 +401,9 @@ func (r *reader) read() (ch rune, pos Pos) {
 	if err != nil {
 		ch = eof
 	} else if ch == '\r' {
-		if ch, _, err := r.r.ReadRune(); err != nil {
+		if c_h, _, err := r.r.ReadRune(); err != nil {
 			// nop
-		} else if ch != '\n' {
+		} else if c_h != '\n' {
 			_ = r.r.UnreadRune()
 		}
 		ch = '\n'

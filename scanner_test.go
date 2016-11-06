@@ -48,9 +48,10 @@ func TestScanner_Scan(t *testing.T) {
 		{s: `and`, tok: jepl.AND},
 		{s: `OR`, tok: jepl.OR},
 		{s: `or`, tok: jepl.OR},
+		{s: `$`, tok: jepl.BOUNDPARAM},
 
 		{s: `=`, tok: jepl.EQ},
-		{s: `<>`, tok: jepl.NEQ},
+		{s: `!=`, tok: jepl.NEQ},
 		{s: `! `, tok: jepl.ILLEGAL, lit: "!"},
 		{s: `<`, tok: jepl.LT},
 		{s: `<=`, tok: jepl.LTE},
