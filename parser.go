@@ -161,7 +161,7 @@ func (p *Parser) parseIdentList() ([]string, error) {
 }
 
 // parseSegmentedIdents parses a segmented identifiers.
-// e.g.,  "db"."rp".measurement  or  "db"..measurement
+// e.g.,  tcp.in_bytes
 func (p *Parser) parseSegmentedIdents() ([]string, error) {
 	ident, err := p.parseIdent()
 	if err != nil {
@@ -176,30 +176,12 @@ func (p *Parser) parseSegmentedIdents() ([]string, error) {
 			p.unscan()
 			break
 		}
-
-		if ch := p.peekRune(); ch == '/' {
-			// Next segment is a regex so we're done.
-			break
-		} else if ch == ':' {
-			// Next segment is context-specific so let caller handle it.
-			break
-		} else if ch == '.' {
-			// Add an empty identifier.
-			idents = append(idents, "")
-			continue
-		}
-
 		// Parse the next identifier.
 		if ident, err = p.parseIdent(); err != nil {
 			return nil, err
 		}
 
 		idents = append(idents, ident)
-	}
-
-	if len(idents) > 3 {
-		msg := fmt.Sprintf("too many segments in %s", QuoteIdent(idents...))
-		return nil, &ParseError{Message: msg}
 	}
 
 	return idents, nil
@@ -412,51 +394,12 @@ func (p *Parser) peekRune() rune {
 func (p *Parser) parseSource() (Source, error) {
 	m := &Measurement{}
 
-	// Attempt to parse a regex.
-	re, err := p.parseRegex()
-	if err != nil {
-		return nil, err
-	} else if re != nil {
-		m.Regex = re
-		// Regex is always last so we're done.
-		return m, nil
-	}
-
 	// Didn't find a regex so parse segmented identifiers.
-	idents, err := p.parseSegmentedIdents()
+	ident, err := p.parseIdent()
 	if err != nil {
 		return nil, err
 	}
-
-	// If we already have the max allowed idents, we're done.
-	if len(idents) == 3 {
-		m.Database, m.RetentionPolicy, m.Name = idents[0], idents[1], idents[2]
-		return m, nil
-	}
-	// Check again for regex.
-	re, err = p.parseRegex()
-	if err != nil {
-		return nil, err
-	} else if re != nil {
-		m.Regex = re
-	}
-
-	// Assign identifiers to their proper locations.
-	switch len(idents) {
-	case 1:
-		if re != nil {
-			m.RetentionPolicy = idents[0]
-		} else {
-			m.Name = idents[0]
-		}
-	case 2:
-		if re != nil {
-			m.Database, m.RetentionPolicy = idents[0], idents[1]
-		} else {
-			m.RetentionPolicy, m.Name = idents[0], idents[1]
-		}
-	}
-
+	m.Database = ident
 	return m, nil
 }
 

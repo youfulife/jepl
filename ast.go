@@ -192,24 +192,10 @@ func (a Sources) Names() []string {
 	for _, s := range a {
 		switch s := s.(type) {
 		case *Measurement:
-			names = append(names, s.Name)
+			names = append(names, s.Database)
 		}
 	}
 	return names
-}
-
-// Filter returns a list of source names filtered by the database/retention policy.
-func (a Sources) Filter(database, retentionPolicy string) []Source {
-	sources := make([]Source, 0, len(a))
-	for _, s := range a {
-		switch s := s.(type) {
-		case *Measurement:
-			if s.Database == database && s.RetentionPolicy == retentionPolicy {
-				sources = append(sources, s)
-			}
-		}
-	}
-	return sources
 }
 
 // String returns a string representation of a Sources array.
@@ -1397,34 +1383,10 @@ func (a Measurements) String() string {
 
 // Measurement represents a single measurement used as a datasource.
 type Measurement struct {
-	Database        string
-	RetentionPolicy string
-	Name            string
-	Regex           *RegexLiteral
-	IsTarget        bool
+	Database string
 }
 
 // String returns a string representation of the measurement.
 func (m *Measurement) String() string {
-	var buf bytes.Buffer
-	if m.Database != "" {
-		_, _ = buf.WriteString(QuoteIdent(m.Database))
-		_, _ = buf.WriteString(".")
-	}
-
-	if m.RetentionPolicy != "" {
-		_, _ = buf.WriteString(QuoteIdent(m.RetentionPolicy))
-	}
-
-	if m.Database != "" || m.RetentionPolicy != "" {
-		_, _ = buf.WriteString(`.`)
-	}
-
-	if m.Name != "" {
-		_, _ = buf.WriteString(QuoteIdent(m.Name))
-	} else if m.Regex != nil {
-		_, _ = buf.WriteString(m.Regex.String())
-	}
-
-	return buf.String()
+	return m.Database
 }

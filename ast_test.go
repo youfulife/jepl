@@ -360,25 +360,6 @@ func TestSelect_ColumnNames(t *testing.T) {
 	}
 }
 
-func TestSources_Names(t *testing.T) {
-	sources := jepl.Sources([]jepl.Source{
-		&jepl.Measurement{
-			Name: "cpu",
-		},
-		&jepl.Measurement{
-			Name: "mem",
-		},
-	})
-
-	names := sources.Names()
-	if names[0] != "cpu" {
-		t.Errorf("expected cpu, got %s", names[0])
-	}
-	if names[1] != "mem" {
-		t.Errorf("expected mem, got %s", names[1])
-	}
-}
-
 // Valuer represents a simple wrapper around a map to implement the jepl.Valuer interface.
 type Valuer map[string]interface{}
 
