@@ -1,11 +1,11 @@
-package epl_test
+package jepl_test
 
 import (
 	"reflect"
 	"strings"
 	"testing"
 
-	"epl"
+	"jepl"
 )
 
 // errstring converts an error to its string representation.
@@ -20,106 +20,106 @@ func errString(err error) string {
 func TestScanner_Scan(t *testing.T) {
 	var tests = []struct {
 		s   string
-		tok epl.Token
+		tok jepl.Token
 		lit string
-		pos epl.Pos
+		pos jepl.Pos
 	}{
 		// Special tokens (EOF, ILLEGAL, WS)
-		{s: ``, tok: epl.EOF},
-		{s: `#`, tok: epl.ILLEGAL, lit: `#`},
-		{s: ` `, tok: epl.WS, lit: " "},
-		{s: "\t", tok: epl.WS, lit: "\t"},
-		{s: "\n", tok: epl.WS, lit: "\n"},
-		{s: "\r", tok: epl.WS, lit: "\n"},
-		{s: "\r\n", tok: epl.WS, lit: "\n"},
-		{s: "\rX", tok: epl.WS, lit: "\n"},
-		{s: "\n\r", tok: epl.WS, lit: "\n\n"},
-		{s: " \n\t \r\n\t", tok: epl.WS, lit: " \n\t \n\t"},
-		{s: " foo", tok: epl.WS, lit: " "},
+		{s: ``, tok: jepl.EOF},
+		{s: `#`, tok: jepl.ILLEGAL, lit: `#`},
+		{s: ` `, tok: jepl.WS, lit: " "},
+		{s: "\t", tok: jepl.WS, lit: "\t"},
+		{s: "\n", tok: jepl.WS, lit: "\n"},
+		{s: "\r", tok: jepl.WS, lit: "\n"},
+		{s: "\r\n", tok: jepl.WS, lit: "\n"},
+		{s: "\rX", tok: jepl.WS, lit: "\n"},
+		{s: "\n\r", tok: jepl.WS, lit: "\n\n"},
+		{s: " \n\t \r\n\t", tok: jepl.WS, lit: " \n\t \n\t"},
+		{s: " foo", tok: jepl.WS, lit: " "},
 
 		// Numeric operators
-		{s: `+`, tok: epl.ADD},
-		{s: `-`, tok: epl.SUB},
-		{s: `*`, tok: epl.MUL},
-		{s: `/`, tok: epl.DIV},
+		{s: `+`, tok: jepl.ADD},
+		{s: `-`, tok: jepl.SUB},
+		{s: `*`, tok: jepl.MUL},
+		{s: `/`, tok: jepl.DIV},
 
 		// Logical operators
-		{s: `AND`, tok: epl.AND},
-		{s: `and`, tok: epl.AND},
-		{s: `OR`, tok: epl.OR},
-		{s: `or`, tok: epl.OR},
+		{s: `AND`, tok: jepl.AND},
+		{s: `and`, tok: jepl.AND},
+		{s: `OR`, tok: jepl.OR},
+		{s: `or`, tok: jepl.OR},
 
-		{s: `=`, tok: epl.EQ},
-		{s: `<>`, tok: epl.NEQ},
-		{s: `! `, tok: epl.ILLEGAL, lit: "!"},
-		{s: `<`, tok: epl.LT},
-		{s: `<=`, tok: epl.LTE},
-		{s: `>`, tok: epl.GT},
-		{s: `>=`, tok: epl.GTE},
+		{s: `=`, tok: jepl.EQ},
+		{s: `<>`, tok: jepl.NEQ},
+		{s: `! `, tok: jepl.ILLEGAL, lit: "!"},
+		{s: `<`, tok: jepl.LT},
+		{s: `<=`, tok: jepl.LTE},
+		{s: `>`, tok: jepl.GT},
+		{s: `>=`, tok: jepl.GTE},
 
 		// Misc tokens
-		{s: `[`, tok: epl.LBRACKET},
-		{s: `(`, tok: epl.LPAREN},
-		{s: `]`, tok: epl.RBRACKET},
-		{s: `)`, tok: epl.RPAREN},
-		{s: `,`, tok: epl.COMMA},
-		{s: `;`, tok: epl.SEMICOLON},
-		{s: `.`, tok: epl.DOT},
-		{s: `=~`, tok: epl.EQREGEX},
-		{s: `!~`, tok: epl.NEQREGEX},
-		{s: `:`, tok: epl.COLON},
-		{s: `::`, tok: epl.DOUBLECOLON},
+		{s: `[`, tok: jepl.LBRACKET},
+		{s: `(`, tok: jepl.LPAREN},
+		{s: `]`, tok: jepl.RBRACKET},
+		{s: `)`, tok: jepl.RPAREN},
+		{s: `,`, tok: jepl.COMMA},
+		{s: `;`, tok: jepl.SEMICOLON},
+		{s: `.`, tok: jepl.DOT},
+		{s: `=~`, tok: jepl.EQREGEX},
+		{s: `!~`, tok: jepl.NEQREGEX},
+		{s: `:`, tok: jepl.COLON},
+		{s: `::`, tok: jepl.DOUBLECOLON},
 
 		// Identifiers
-		{s: `foo`, tok: epl.IDENT, lit: `foo`},
-		{s: `_foo`, tok: epl.IDENT, lit: `_foo`},
-		{s: `Zx12_3U_-`, tok: epl.IDENT, lit: `Zx12_3U_`},
-		{s: `"foo"`, tok: epl.IDENT, lit: `foo`},
-		{s: `"foo\\bar"`, tok: epl.IDENT, lit: `foo\bar`},
-		{s: `"foo\bar"`, tok: epl.BADESCAPE, lit: `\b`, pos: epl.Pos{Line: 0, Char: 5}},
-		{s: `"foo\"bar\""`, tok: epl.IDENT, lit: `foo"bar"`},
-		{s: `test"`, tok: epl.BADSTRING, lit: "", pos: epl.Pos{Line: 0, Char: 3}},
-		{s: `"test`, tok: epl.BADSTRING, lit: `test`},
-		{s: `$host`, tok: epl.BOUNDPARAM, lit: `$host`},
-		{s: `$"host param"`, tok: epl.BOUNDPARAM, lit: `$host param`},
+		{s: `foo`, tok: jepl.IDENT, lit: `foo`},
+		{s: `_foo`, tok: jepl.IDENT, lit: `_foo`},
+		{s: `Zx12_3U_-`, tok: jepl.IDENT, lit: `Zx12_3U_`},
+		{s: `"foo"`, tok: jepl.IDENT, lit: `foo`},
+		{s: `"foo\\bar"`, tok: jepl.IDENT, lit: `foo\bar`},
+		{s: `"foo\bar"`, tok: jepl.BADESCAPE, lit: `\b`, pos: jepl.Pos{Line: 0, Char: 5}},
+		{s: `"foo\"bar\""`, tok: jepl.IDENT, lit: `foo"bar"`},
+		{s: `test"`, tok: jepl.BADSTRING, lit: "", pos: jepl.Pos{Line: 0, Char: 3}},
+		{s: `"test`, tok: jepl.BADSTRING, lit: `test`},
+		{s: `$host`, tok: jepl.BOUNDPARAM, lit: `$host`},
+		{s: `$"host param"`, tok: jepl.BOUNDPARAM, lit: `$host param`},
 
-		{s: `true`, tok: epl.TRUE},
-		{s: `false`, tok: epl.FALSE},
+		{s: `true`, tok: jepl.TRUE},
+		{s: `false`, tok: jepl.FALSE},
 
 		// Strings
-		{s: `'testing 123!'`, tok: epl.STRING, lit: `testing 123!`},
-		{s: `'foo\nbar'`, tok: epl.STRING, lit: "foo\nbar"},
-		{s: `'foo\\bar'`, tok: epl.STRING, lit: "foo\\bar"},
-		{s: `'test`, tok: epl.BADSTRING, lit: `test`},
-		{s: "'test\nfoo", tok: epl.BADSTRING, lit: `test`},
-		{s: `'test\g'`, tok: epl.BADESCAPE, lit: `\g`, pos: epl.Pos{Line: 0, Char: 6}},
+		{s: `'testing 123!'`, tok: jepl.STRING, lit: `testing 123!`},
+		{s: `'foo\nbar'`, tok: jepl.STRING, lit: "foo\nbar"},
+		{s: `'foo\\bar'`, tok: jepl.STRING, lit: "foo\\bar"},
+		{s: `'test`, tok: jepl.BADSTRING, lit: `test`},
+		{s: "'test\nfoo", tok: jepl.BADSTRING, lit: `test`},
+		{s: `'test\g'`, tok: jepl.BADESCAPE, lit: `\g`, pos: jepl.Pos{Line: 0, Char: 6}},
 
 		// Numbers
-		{s: `100`, tok: epl.INTEGER, lit: `100`},
-		{s: `-100`, tok: epl.INTEGER, lit: `-100`},
-		{s: `100.23`, tok: epl.NUMBER, lit: `100.23`},
-		{s: `+100.23`, tok: epl.NUMBER, lit: `+100.23`},
-		{s: `-100.23`, tok: epl.NUMBER, lit: `-100.23`},
-		{s: `-100.`, tok: epl.NUMBER, lit: `-100`},
-		{s: `.23`, tok: epl.NUMBER, lit: `.23`},
-		{s: `+.23`, tok: epl.NUMBER, lit: `+.23`},
-		{s: `-.23`, tok: epl.NUMBER, lit: `-.23`},
-		//{s: `.`, tok: epl.ILLEGAL, lit: `.`},
-		{s: `-.`, tok: epl.SUB, lit: ``},
-		{s: `+.`, tok: epl.ADD, lit: ``},
-		{s: `10.3s`, tok: epl.NUMBER, lit: `10.3`},
+		{s: `100`, tok: jepl.INTEGER, lit: `100`},
+		{s: `-100`, tok: jepl.INTEGER, lit: `-100`},
+		{s: `100.23`, tok: jepl.NUMBER, lit: `100.23`},
+		{s: `+100.23`, tok: jepl.NUMBER, lit: `+100.23`},
+		{s: `-100.23`, tok: jepl.NUMBER, lit: `-100.23`},
+		{s: `-100.`, tok: jepl.NUMBER, lit: `-100`},
+		{s: `.23`, tok: jepl.NUMBER, lit: `.23`},
+		{s: `+.23`, tok: jepl.NUMBER, lit: `+.23`},
+		{s: `-.23`, tok: jepl.NUMBER, lit: `-.23`},
+		//{s: `.`, tok: jepl.ILLEGAL, lit: `.`},
+		{s: `-.`, tok: jepl.SUB, lit: ``},
+		{s: `+.`, tok: jepl.ADD, lit: ``},
+		{s: `10.3s`, tok: jepl.NUMBER, lit: `10.3`},
 
 		// Keywords
-		{s: `ALL`, tok: epl.ALL},
-		{s: `FROM`, tok: epl.FROM},
-		{s: `NI`, tok: epl.NI},
-		{s: `IN`, tok: epl.IN},
-		{s: `SELECT`, tok: epl.SELECT},
-		{s: `WHERE`, tok: epl.WHERE},
+		{s: `ALL`, tok: jepl.ALL},
+		{s: `FROM`, tok: jepl.FROM},
+		{s: `NI`, tok: jepl.NI},
+		{s: `IN`, tok: jepl.IN},
+		{s: `SELECT`, tok: jepl.SELECT},
+		{s: `WHERE`, tok: jepl.WHERE},
 	}
 
 	for i, tt := range tests {
-		s := epl.NewScanner(strings.NewReader(tt.s))
+		s := jepl.NewScanner(strings.NewReader(tt.s))
 		tok, pos, lit := s.Scan()
 		if tt.tok != tok {
 			t.Errorf("%d. %q token mismatch: exp=%q got=%q <%q>", i, tt.s, tt.tok, tok, lit)
@@ -134,39 +134,39 @@ func TestScanner_Scan(t *testing.T) {
 // Ensure the scanner can scan a series of tokens correctly.
 func TestScanner_Scan_Multi(t *testing.T) {
 	type result struct {
-		tok epl.Token
-		pos epl.Pos
+		tok jepl.Token
+		pos jepl.Pos
 		lit string
 	}
 	exp := []result{
-		{tok: epl.SELECT, pos: epl.Pos{Line: 0, Char: 0}, lit: ""},
-		{tok: epl.WS, pos: epl.Pos{Line: 0, Char: 6}, lit: " "},
-		{tok: epl.IDENT, pos: epl.Pos{Line: 0, Char: 7}, lit: "value"},
-		{tok: epl.WS, pos: epl.Pos{Line: 0, Char: 12}, lit: " "},
-		{tok: epl.FROM, pos: epl.Pos{Line: 0, Char: 13}, lit: ""},
-		{tok: epl.WS, pos: epl.Pos{Line: 0, Char: 17}, lit: " "},
-		{tok: epl.IDENT, pos: epl.Pos{Line: 0, Char: 18}, lit: "myseries"},
-		{tok: epl.WS, pos: epl.Pos{Line: 0, Char: 26}, lit: " "},
-		{tok: epl.WHERE, pos: epl.Pos{Line: 0, Char: 27}, lit: ""},
-		{tok: epl.WS, pos: epl.Pos{Line: 0, Char: 32}, lit: " "},
-		{tok: epl.IDENT, pos: epl.Pos{Line: 0, Char: 33}, lit: "a"},
-		{tok: epl.WS, pos: epl.Pos{Line: 0, Char: 34}, lit: " "},
-		{tok: epl.EQ, pos: epl.Pos{Line: 0, Char: 35}, lit: ""},
-		{tok: epl.WS, pos: epl.Pos{Line: 0, Char: 36}, lit: " "},
-		{tok: epl.STRING, pos: epl.Pos{Line: 0, Char: 36}, lit: "b"},
-		{tok: epl.EOF, pos: epl.Pos{Line: 0, Char: 40}, lit: ""},
+		{tok: jepl.SELECT, pos: jepl.Pos{Line: 0, Char: 0}, lit: ""},
+		{tok: jepl.WS, pos: jepl.Pos{Line: 0, Char: 6}, lit: " "},
+		{tok: jepl.IDENT, pos: jepl.Pos{Line: 0, Char: 7}, lit: "value"},
+		{tok: jepl.WS, pos: jepl.Pos{Line: 0, Char: 12}, lit: " "},
+		{tok: jepl.FROM, pos: jepl.Pos{Line: 0, Char: 13}, lit: ""},
+		{tok: jepl.WS, pos: jepl.Pos{Line: 0, Char: 17}, lit: " "},
+		{tok: jepl.IDENT, pos: jepl.Pos{Line: 0, Char: 18}, lit: "myseries"},
+		{tok: jepl.WS, pos: jepl.Pos{Line: 0, Char: 26}, lit: " "},
+		{tok: jepl.WHERE, pos: jepl.Pos{Line: 0, Char: 27}, lit: ""},
+		{tok: jepl.WS, pos: jepl.Pos{Line: 0, Char: 32}, lit: " "},
+		{tok: jepl.IDENT, pos: jepl.Pos{Line: 0, Char: 33}, lit: "a"},
+		{tok: jepl.WS, pos: jepl.Pos{Line: 0, Char: 34}, lit: " "},
+		{tok: jepl.EQ, pos: jepl.Pos{Line: 0, Char: 35}, lit: ""},
+		{tok: jepl.WS, pos: jepl.Pos{Line: 0, Char: 36}, lit: " "},
+		{tok: jepl.STRING, pos: jepl.Pos{Line: 0, Char: 36}, lit: "b"},
+		{tok: jepl.EOF, pos: jepl.Pos{Line: 0, Char: 40}, lit: ""},
 	}
 
 	// Create a scanner.
 	v := `SELECT value from myseries WHERE a = 'b'`
-	s := epl.NewScanner(strings.NewReader(v))
+	s := jepl.NewScanner(strings.NewReader(v))
 
 	// Continually scan until we reach the end.
 	var act []result
 	for {
 		tok, pos, lit := s.Scan()
 		act = append(act, result{tok, pos, lit})
-		if tok == epl.EOF {
+		if tok == jepl.EOF {
 			break
 		}
 	}
@@ -205,7 +205,7 @@ func TestScanString(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		out, err := epl.ScanString(strings.NewReader(tt.in))
+		out, err := jepl.ScanString(strings.NewReader(tt.in))
 		if tt.err != errString(err) {
 			t.Errorf("%d. %s: error: exp=%s, got=%s", i, tt.in, tt.err, err)
 		} else if tt.out != out {
@@ -218,19 +218,19 @@ func TestScanString(t *testing.T) {
 func TestScanRegex(t *testing.T) {
 	var tests = []struct {
 		in  string
-		tok epl.Token
+		tok jepl.Token
 		lit string
 		err string
 	}{
-		{in: `/^payments\./`, tok: epl.REGEX, lit: `^payments\.`},
-		{in: `/foo\/bar/`, tok: epl.REGEX, lit: `foo/bar`},
-		{in: `/foo\\/bar/`, tok: epl.REGEX, lit: `foo\/bar`},
-		{in: `/foo\\bar/`, tok: epl.REGEX, lit: `foo\\bar`},
-		{in: `/http\:\/\/www\.example\.com/`, tok: epl.REGEX, lit: `http\://www\.example\.com`},
+		{in: `/^payments\./`, tok: jepl.REGEX, lit: `^payments\.`},
+		{in: `/foo\/bar/`, tok: jepl.REGEX, lit: `foo/bar`},
+		{in: `/foo\\/bar/`, tok: jepl.REGEX, lit: `foo\/bar`},
+		{in: `/foo\\bar/`, tok: jepl.REGEX, lit: `foo\\bar`},
+		{in: `/http\:\/\/www\.example\.com/`, tok: jepl.REGEX, lit: `http\://www\.example\.com`},
 	}
 
 	for i, tt := range tests {
-		s := epl.NewScanner(strings.NewReader(tt.in))
+		s := jepl.NewScanner(strings.NewReader(tt.in))
 		tok, _, lit := s.ScanRegex()
 		if tok != tt.tok {
 			t.Errorf("%d. %s: error:\n\texp=%s\n\tgot=%s\n", i, tt.in, tt.tok.String(), tok.String())

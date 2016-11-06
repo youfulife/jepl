@@ -1,9 +1,9 @@
-package epl_test
+package jepl_test
 
 import (
 	"encoding/json"
-	"epl"
 	"fmt"
+	"jepl"
 	"reflect"
 	"regexp"
 	"strings"
@@ -12,7 +12,7 @@ import (
 
 // Ensure the parser can parse an empty query.
 func TestParser_ParseQuery_Empty(t *testing.T) {
-	q, err := epl.NewParser(strings.NewReader(``)).ParseQuery()
+	q, err := jepl.NewParser(strings.NewReader(``)).ParseQuery()
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	} else if len(q.Statements) != 0 {
@@ -22,7 +22,7 @@ func TestParser_ParseQuery_Empty(t *testing.T) {
 
 // Ensure the parser can return an error from an malformed statement.
 func TestParser_ParseQuery_ParseError(t *testing.T) {
-	_, err := epl.NewParser(strings.NewReader(`SELECT`)).ParseQuery()
+	_, err := jepl.NewParser(strings.NewReader(`SELECT`)).ParseQuery()
 	if err == nil || err.Error() != `found EOF, expected identifier, string, number, bool at line 1, char 8` {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -35,7 +35,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		skip   bool
 		s      string
 		params map[string]interface{}
-		stmt   epl.Statement
+		stmt   jepl.Statement
 		err    string
 	}{
 		// Errors
@@ -60,7 +60,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		if tt.skip {
 			continue
 		}
-		p := epl.NewParser(strings.NewReader(tt.s))
+		p := jepl.NewParser(strings.NewReader(tt.s))
 		if tt.params != nil {
 			p.SetParams(tt.params)
 		}
@@ -74,7 +74,7 @@ func TestParser_ParseStatement(t *testing.T) {
 				t.Logf("\nSQL exp=%s\nSQL got=%s\n", tt.stmt.String(), stmt.String())
 				t.Errorf("%d. %q\n\nstmt mismatch:\n\nexp=%#v\n\ngot=%#v\n\n", i, tt.s, tt.stmt, stmt)
 			} else {
-				stmt2, err := epl.ParseStatement(stmt.String())
+				stmt2, err := jepl.ParseStatement(stmt.String())
 				if err != nil {
 					t.Errorf("%d. %q: unable to parse statement string: %s", i, stmt.String(), err)
 				} else if !reflect.DeepEqual(tt.stmt, stmt2) {
@@ -91,50 +91,50 @@ func TestParser_ParseStatement(t *testing.T) {
 func TestParser_ParseExpr(t *testing.T) {
 	var tests = []struct {
 		s    string
-		expr epl.Expr
+		expr jepl.Expr
 		err  string
 	}{
 		// Primitives
-		{s: `100.0`, expr: &epl.NumberLiteral{Val: 100}},
-		{s: `100`, expr: &epl.IntegerLiteral{Val: 100}},
-		{s: `'foo bar'`, expr: &epl.StringLiteral{Val: "foo bar"}},
-		{s: `true`, expr: &epl.BooleanLiteral{Val: true}},
-		{s: `false`, expr: &epl.BooleanLiteral{Val: false}},
-		{s: `my_ident`, expr: &epl.VarRef{Val: "my_ident"}},
+		{s: `100.0`, expr: &jepl.NumberLiteral{Val: 100}},
+		{s: `100`, expr: &jepl.IntegerLiteral{Val: 100}},
+		{s: `'foo bar'`, expr: &jepl.StringLiteral{Val: "foo bar"}},
+		{s: `true`, expr: &jepl.BooleanLiteral{Val: true}},
+		{s: `false`, expr: &jepl.BooleanLiteral{Val: false}},
+		{s: `my_ident`, expr: &jepl.VarRef{Val: "my_ident"}},
 		// Simple binary expression
 		{
 			s: `1 + 2`,
-			expr: &epl.BinaryExpr{
-				Op:  epl.ADD,
-				LHS: &epl.IntegerLiteral{Val: 1},
-				RHS: &epl.IntegerLiteral{Val: 2},
+			expr: &jepl.BinaryExpr{
+				Op:  jepl.ADD,
+				LHS: &jepl.IntegerLiteral{Val: 1},
+				RHS: &jepl.IntegerLiteral{Val: 2},
 			},
 		},
 
 		// Binary expression with LHS precedence
 		{
 			s: `1 * 2 + 3`,
-			expr: &epl.BinaryExpr{
-				Op: epl.ADD,
-				LHS: &epl.BinaryExpr{
-					Op:  epl.MUL,
-					LHS: &epl.IntegerLiteral{Val: 1},
-					RHS: &epl.IntegerLiteral{Val: 2},
+			expr: &jepl.BinaryExpr{
+				Op: jepl.ADD,
+				LHS: &jepl.BinaryExpr{
+					Op:  jepl.MUL,
+					LHS: &jepl.IntegerLiteral{Val: 1},
+					RHS: &jepl.IntegerLiteral{Val: 2},
 				},
-				RHS: &epl.IntegerLiteral{Val: 3},
+				RHS: &jepl.IntegerLiteral{Val: 3},
 			},
 		},
 
 		// Binary expression with RHS precedence
 		{
 			s: `1 + 2 * 3`,
-			expr: &epl.BinaryExpr{
-				Op:  epl.ADD,
-				LHS: &epl.IntegerLiteral{Val: 1},
-				RHS: &epl.BinaryExpr{
-					Op:  epl.MUL,
-					LHS: &epl.IntegerLiteral{Val: 2},
-					RHS: &epl.IntegerLiteral{Val: 3},
+			expr: &jepl.BinaryExpr{
+				Op:  jepl.ADD,
+				LHS: &jepl.IntegerLiteral{Val: 1},
+				RHS: &jepl.BinaryExpr{
+					Op:  jepl.MUL,
+					LHS: &jepl.IntegerLiteral{Val: 2},
+					RHS: &jepl.IntegerLiteral{Val: 3},
 				},
 			},
 		},
@@ -142,83 +142,83 @@ func TestParser_ParseExpr(t *testing.T) {
 		// Binary expression with LHS paren group.
 		{
 			s: `(1 + 2) * 3`,
-			expr: &epl.BinaryExpr{
-				Op: epl.MUL,
-				LHS: &epl.ParenExpr{
-					Expr: &epl.BinaryExpr{
-						Op:  epl.ADD,
-						LHS: &epl.IntegerLiteral{Val: 1},
-						RHS: &epl.IntegerLiteral{Val: 2},
+			expr: &jepl.BinaryExpr{
+				Op: jepl.MUL,
+				LHS: &jepl.ParenExpr{
+					Expr: &jepl.BinaryExpr{
+						Op:  jepl.ADD,
+						LHS: &jepl.IntegerLiteral{Val: 1},
+						RHS: &jepl.IntegerLiteral{Val: 2},
 					},
 				},
-				RHS: &epl.IntegerLiteral{Val: 3},
+				RHS: &jepl.IntegerLiteral{Val: 3},
 			},
 		},
 
 		// Binary expression with no precedence, tests left associativity.
 		{
 			s: `1 * 2 * 3`,
-			expr: &epl.BinaryExpr{
-				Op: epl.MUL,
-				LHS: &epl.BinaryExpr{
-					Op:  epl.MUL,
-					LHS: &epl.IntegerLiteral{Val: 1},
-					RHS: &epl.IntegerLiteral{Val: 2},
+			expr: &jepl.BinaryExpr{
+				Op: jepl.MUL,
+				LHS: &jepl.BinaryExpr{
+					Op:  jepl.MUL,
+					LHS: &jepl.IntegerLiteral{Val: 1},
+					RHS: &jepl.IntegerLiteral{Val: 2},
 				},
-				RHS: &epl.IntegerLiteral{Val: 3},
+				RHS: &jepl.IntegerLiteral{Val: 3},
 			},
 		},
 
 		// Binary expression with regex.
 		{
 			s: `region =~ /us.*/`,
-			expr: &epl.BinaryExpr{
-				Op:  epl.EQREGEX,
-				LHS: &epl.VarRef{Val: "region"},
-				RHS: &epl.RegexLiteral{Val: regexp.MustCompile(`us.*`)},
+			expr: &jepl.BinaryExpr{
+				Op:  jepl.EQREGEX,
+				LHS: &jepl.VarRef{Val: "region"},
+				RHS: &jepl.RegexLiteral{Val: regexp.MustCompile(`us.*`)},
 			},
 		},
 
 		// Binary expression with quoted '/' regex.
 		{
 			s: `url =~ /http\:\/\/www\.example\.com/`,
-			expr: &epl.BinaryExpr{
-				Op:  epl.EQREGEX,
-				LHS: &epl.VarRef{Val: "url"},
-				RHS: &epl.RegexLiteral{Val: regexp.MustCompile(`http\://www\.example\.com`)},
+			expr: &jepl.BinaryExpr{
+				Op:  jepl.EQREGEX,
+				LHS: &jepl.VarRef{Val: "url"},
+				RHS: &jepl.RegexLiteral{Val: regexp.MustCompile(`http\://www\.example\.com`)},
 			},
 		},
 
 		// Complex binary expression.
 		{
 			s: `value + 3 < 30 AND 1 + 2 OR true`,
-			expr: &epl.BinaryExpr{
-				Op: epl.OR,
-				LHS: &epl.BinaryExpr{
-					Op: epl.AND,
-					LHS: &epl.BinaryExpr{
-						Op: epl.LT,
-						LHS: &epl.BinaryExpr{
-							Op:  epl.ADD,
-							LHS: &epl.VarRef{Val: "value"},
-							RHS: &epl.IntegerLiteral{Val: 3},
+			expr: &jepl.BinaryExpr{
+				Op: jepl.OR,
+				LHS: &jepl.BinaryExpr{
+					Op: jepl.AND,
+					LHS: &jepl.BinaryExpr{
+						Op: jepl.LT,
+						LHS: &jepl.BinaryExpr{
+							Op:  jepl.ADD,
+							LHS: &jepl.VarRef{Val: "value"},
+							RHS: &jepl.IntegerLiteral{Val: 3},
 						},
-						RHS: &epl.IntegerLiteral{Val: 30},
+						RHS: &jepl.IntegerLiteral{Val: 30},
 					},
-					RHS: &epl.BinaryExpr{
-						Op:  epl.ADD,
-						LHS: &epl.IntegerLiteral{Val: 1},
-						RHS: &epl.IntegerLiteral{Val: 2},
+					RHS: &jepl.BinaryExpr{
+						Op:  jepl.ADD,
+						LHS: &jepl.IntegerLiteral{Val: 1},
+						RHS: &jepl.IntegerLiteral{Val: 2},
 					},
 				},
-				RHS: &epl.BooleanLiteral{Val: true},
+				RHS: &jepl.BooleanLiteral{Val: true},
 			},
 		},
 
 		// Function call (empty)
 		{
 			s: `my_func()`,
-			expr: &epl.Call{
+			expr: &jepl.Call{
 				Name: "my_func",
 			},
 		},
@@ -226,14 +226,14 @@ func TestParser_ParseExpr(t *testing.T) {
 		// Function call (multi-arg)
 		{
 			s: `my_func(1, 2 + 3)`,
-			expr: &epl.Call{
+			expr: &jepl.Call{
 				Name: "my_func",
-				Args: []epl.Expr{
-					&epl.IntegerLiteral{Val: 1},
-					&epl.BinaryExpr{
-						Op:  epl.ADD,
-						LHS: &epl.IntegerLiteral{Val: 2},
-						RHS: &epl.IntegerLiteral{Val: 3},
+				Args: []jepl.Expr{
+					&jepl.IntegerLiteral{Val: 1},
+					&jepl.BinaryExpr{
+						Op:  jepl.ADD,
+						LHS: &jepl.IntegerLiteral{Val: 2},
+						RHS: &jepl.IntegerLiteral{Val: 3},
 					},
 				},
 			},
@@ -241,7 +241,7 @@ func TestParser_ParseExpr(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		expr, err := epl.NewParser(strings.NewReader(tt.s)).ParseExpr()
+		expr, err := jepl.NewParser(strings.NewReader(tt.s)).ParseExpr()
 		if !reflect.DeepEqual(tt.err, errstring(err)) {
 			t.Errorf("%d. %q: error mismatch:\n  exp=%s\n  got=%s\n\n", i, tt.s, tt.err, err)
 		} else if tt.err == "" && !reflect.DeepEqual(tt.expr, expr) {
@@ -262,7 +262,7 @@ func TestQuote(t *testing.T) {
 		{`foo bar\\`, `'foo bar\\\\'`},
 		{`'foo'`, `'\'foo\''`},
 	} {
-		if out := epl.QuoteString(tt.in); tt.out != out {
+		if out := jepl.QuoteString(tt.in); tt.out != out {
 			t.Errorf("%d. %s: mismatch: %s != %s", i, tt.in, tt.out, out)
 		}
 	}
@@ -284,7 +284,7 @@ func TestQuoteIdent(t *testing.T) {
 		{[]string{`foo.bar`, `rp`, `baz`}, `"foo.bar"."rp".baz`},
 		{[]string{`foo.bar`, `rp`, `1baz`}, `"foo.bar"."rp"."1baz"`},
 	} {
-		if s := epl.QuoteIdent(tt.ident...); tt.s != s {
+		if s := jepl.QuoteIdent(tt.ident...); tt.s != s {
 			t.Errorf("%d. %s: mismatch: %s != %s", i, tt.ident, tt.s, s)
 		}
 	}
@@ -294,7 +294,7 @@ func BenchmarkParserParseStatement(b *testing.B) {
 	b.ReportAllocs()
 	s := `SELECT "field" FROM "series" WHERE value > 10`
 	for i := 0; i < b.N; i++ {
-		if stmt, err := epl.NewParser(strings.NewReader(s)).ParseStatement(); err != nil {
+		if stmt, err := jepl.NewParser(strings.NewReader(s)).ParseStatement(); err != nil {
 			b.Fatalf("unexpected error: %s", err)
 		} else if stmt == nil {
 			b.Fatalf("expected statement: %s", stmt)
@@ -304,17 +304,17 @@ func BenchmarkParserParseStatement(b *testing.B) {
 }
 
 // MustParseSelectStatement parses a select statement. Panic on error.
-func MustParseSelectStatement(s string) *epl.SelectStatement {
-	stmt, err := epl.NewParser(strings.NewReader(s)).ParseStatement()
+func MustParseSelectStatement(s string) *jepl.SelectStatement {
+	stmt, err := jepl.NewParser(strings.NewReader(s)).ParseStatement()
 	if err != nil {
 		panic(err)
 	}
-	return stmt.(*epl.SelectStatement)
+	return stmt.(*jepl.SelectStatement)
 }
 
 // MustParseExpr parses an expression. Panic on error.
-func MustParseExpr(s string) epl.Expr {
-	expr, err := epl.NewParser(strings.NewReader(s)).ParseExpr()
+func MustParseExpr(s string) jepl.Expr {
+	expr, err := jepl.NewParser(strings.NewReader(s)).ParseExpr()
 	if err != nil {
 		fmt.Println(s)
 		panic(err)

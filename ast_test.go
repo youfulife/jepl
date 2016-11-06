@@ -1,14 +1,14 @@
-package epl_test
+package jepl_test
 
 import (
-	"epl"
+	"jepl"
 	"reflect"
 	"strings"
 	"testing"
 )
 
 func BenchmarkQuery_String(b *testing.B) {
-	p := epl.NewParser(strings.NewReader(`SELECT foo AS zoo, a AS b FROM bar WHERE value > 10 AND q = 'hello'`))
+	p := jepl.NewParser(strings.NewReader(`SELECT foo AS zoo, a AS b FROM bar WHERE value > 10 AND q = 'hello'`))
 	q, _ := p.ParseStatement()
 	for i := 0; i < b.N; i++ {
 		_ = q.String()
@@ -19,17 +19,17 @@ func BenchmarkQuery_String(b *testing.B) {
 func TestInspectDataType(t *testing.T) {
 	for i, tt := range []struct {
 		v   interface{}
-		typ epl.DataType
+		typ jepl.DataType
 	}{
-		{float64(100), epl.Float},
-		{int64(100), epl.Integer},
-		{int32(100), epl.Integer},
-		{100, epl.Integer},
-		{true, epl.Boolean},
-		{"string", epl.String},
-		{nil, epl.Unknown},
+		{float64(100), jepl.Float},
+		{int64(100), jepl.Integer},
+		{int32(100), jepl.Integer},
+		{100, jepl.Integer},
+		{true, jepl.Boolean},
+		{"string", jepl.String},
+		{nil, jepl.Unknown},
 	} {
-		if typ := epl.InspectDataType(tt.v); tt.typ != typ {
+		if typ := jepl.InspectDataType(tt.v); tt.typ != typ {
 			t.Errorf("%d. %v (%s): unexpected type: %s", i, tt.v, tt.typ, typ)
 			continue
 		}
@@ -38,14 +38,14 @@ func TestInspectDataType(t *testing.T) {
 
 func TestDataType_String(t *testing.T) {
 	for i, tt := range []struct {
-		typ epl.DataType
+		typ jepl.DataType
 		v   string
 	}{
-		{epl.Float, "float"},
-		{epl.Integer, "integer"},
-		{epl.Boolean, "boolean"},
-		{epl.String, "string"},
-		{epl.Unknown, "unknown"},
+		{jepl.Float, "float"},
+		{jepl.Integer, "integer"},
+		{jepl.Boolean, "boolean"},
+		{jepl.String, "string"},
+		{jepl.Unknown, "unknown"},
 	} {
 		if v := tt.typ.String(); tt.v != v {
 			t.Errorf("%d. %v (%s): unexpected string: %s", i, tt.typ, tt.v, v)
@@ -117,10 +117,10 @@ func TestBinaryExprName(t *testing.T) {
 		{expr: `"user" / total`, name: `user_total`},
 		{expr: `("user" + total) / total`, name: `user_total_total`},
 	} {
-		expr, _ := epl.ParseExpr(tt.expr)
+		expr, _ := jepl.ParseExpr(tt.expr)
 		switch expr := expr.(type) {
-		case *epl.BinaryExpr:
-			name := epl.BinaryExprName(expr)
+		case *jepl.BinaryExpr:
+			name := jepl.BinaryExprName(expr)
 			if name != tt.name {
 				t.Errorf("%d. unexpected name %s, got %s", i, name, tt.name)
 			}
@@ -160,11 +160,11 @@ func TestOnlyTimeExpr(t *testing.T) {
 
 	for i, tt := range tests {
 		// Parse statement.
-		stmt, err := epl.NewParser(strings.NewReader(tt.stmt)).ParseStatement()
+		stmt, err := jepl.NewParser(strings.NewReader(tt.stmt)).ParseStatement()
 		if err != nil {
 			t.Fatalf("invalid statement: %q: %s", tt.stmt, err)
 		}
-		if epl.OnlyTimeExpr(stmt.(*epl.SelectStatement).Condition) != tt.exp {
+		if jepl.OnlyTimeExpr(stmt.(*jepl.SelectStatement).Condition) != tt.exp {
 			t.Fatalf("%d. expected statement to return only time dimension to be %t: %s", i, tt.exp, tt.stmt)
 		}
 	}
@@ -217,7 +217,7 @@ func TestEval(t *testing.T) {
 		{in: `foo !~ /b.*/`, out: false, data: map[string]interface{}{"foo": "bar"}},
 	} {
 		// Evaluate expression.
-		out := epl.Eval(MustParseExpr(tt.in), tt.data)
+		out := jepl.Eval(MustParseExpr(tt.in), tt.data)
 
 		// Compare with expected output.
 		if !reflect.DeepEqual(tt.out, out) {
@@ -284,10 +284,10 @@ func Test_fieldsNames(t *testing.T) {
 			alias: []string{"mean_max"},
 		},
 	} {
-		fields := epl.Fields{}
+		fields := jepl.Fields{}
 		for _, s := range test.in {
 			expr := MustParseExpr(s)
-			fields = append(fields, &epl.Field{Expr: expr})
+			fields = append(fields, &jepl.Field{Expr: expr})
 		}
 		got := fields.Names()
 		if !reflect.DeepEqual(got, test.out) {
@@ -303,51 +303,51 @@ func Test_fieldsNames(t *testing.T) {
 
 func TestSelect_ColumnNames(t *testing.T) {
 	for i, tt := range []struct {
-		stmt    *epl.SelectStatement
+		stmt    *jepl.SelectStatement
 		columns []string
 	}{
 		{
-			stmt: &epl.SelectStatement{
-				Fields: epl.Fields([]*epl.Field{
-					{Expr: &epl.VarRef{Val: "value"}},
+			stmt: &jepl.SelectStatement{
+				Fields: jepl.Fields([]*jepl.Field{
+					{Expr: &jepl.VarRef{Val: "value"}},
 				}),
 			},
 			columns: []string{"value"},
 		},
 		{
-			stmt: &epl.SelectStatement{
-				Fields: epl.Fields([]*epl.Field{
-					{Expr: &epl.Call{Name: "sum"}},
+			stmt: &jepl.SelectStatement{
+				Fields: jepl.Fields([]*jepl.Field{
+					{Expr: &jepl.Call{Name: "sum"}},
 				}),
 			},
 			columns: []string{"sum"},
 		},
 		{
-			stmt: &epl.SelectStatement{
-				Fields: epl.Fields([]*epl.Field{
-					{Expr: &epl.VarRef{Val: "value"}},
-					{Expr: &epl.VarRef{Val: "value"}},
-					{Expr: &epl.VarRef{Val: "value_1"}},
+			stmt: &jepl.SelectStatement{
+				Fields: jepl.Fields([]*jepl.Field{
+					{Expr: &jepl.VarRef{Val: "value"}},
+					{Expr: &jepl.VarRef{Val: "value"}},
+					{Expr: &jepl.VarRef{Val: "value_1"}},
 				}),
 			},
 			columns: []string{"value", "value_1", "value_1_1"},
 		},
 		{
-			stmt: &epl.SelectStatement{
-				Fields: epl.Fields([]*epl.Field{
-					{Expr: &epl.VarRef{Val: "value"}},
-					{Expr: &epl.VarRef{Val: "value_1"}},
-					{Expr: &epl.VarRef{Val: "value"}},
+			stmt: &jepl.SelectStatement{
+				Fields: jepl.Fields([]*jepl.Field{
+					{Expr: &jepl.VarRef{Val: "value"}},
+					{Expr: &jepl.VarRef{Val: "value_1"}},
+					{Expr: &jepl.VarRef{Val: "value"}},
 				}),
 			},
 			columns: []string{"value", "value_1", "value_2"},
 		},
 		{
-			stmt: &epl.SelectStatement{
-				Fields: epl.Fields([]*epl.Field{
-					{Expr: &epl.VarRef{Val: "value"}},
-					{Expr: &epl.VarRef{Val: "total"}, Alias: "value"},
-					{Expr: &epl.VarRef{Val: "value"}},
+			stmt: &jepl.SelectStatement{
+				Fields: jepl.Fields([]*jepl.Field{
+					{Expr: &jepl.VarRef{Val: "value"}},
+					{Expr: &jepl.VarRef{Val: "total"}, Alias: "value"},
+					{Expr: &jepl.VarRef{Val: "value"}},
 				}),
 			},
 			columns: []string{"value_1", "value", "value_2"},
@@ -361,11 +361,11 @@ func TestSelect_ColumnNames(t *testing.T) {
 }
 
 func TestSources_Names(t *testing.T) {
-	sources := epl.Sources([]epl.Source{
-		&epl.Measurement{
+	sources := jepl.Sources([]jepl.Source{
+		&jepl.Measurement{
 			Name: "cpu",
 		},
-		&epl.Measurement{
+		&jepl.Measurement{
 			Name: "mem",
 		},
 	})
@@ -379,7 +379,7 @@ func TestSources_Names(t *testing.T) {
 	}
 }
 
-// Valuer represents a simple wrapper around a map to implement the epl.Valuer interface.
+// Valuer represents a simple wrapper around a map to implement the jepl.Valuer interface.
 type Valuer map[string]interface{}
 
 // Value returns the value and existence of a key.

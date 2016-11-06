@@ -1,4 +1,4 @@
-package epl
+package jepl
 
 import (
 	"bufio"
