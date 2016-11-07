@@ -100,7 +100,7 @@ func TestParser_ParseExpr(t *testing.T) {
 		{s: `'foo bar'`, expr: &jepl.StringLiteral{Val: "foo bar"}},
 		{s: `true`, expr: &jepl.BooleanLiteral{Val: true}},
 		{s: `false`, expr: &jepl.BooleanLiteral{Val: false}},
-		{s: `my_ident`, expr: &jepl.VarRef{Val: "my_ident"}},
+		{s: `my_ident`, expr: &jepl.VarRef{Val: "my_ident", Segments: []string{"my_ident"}}},
 		// Simple binary expression
 		{
 			s: `1 + 2`,
@@ -174,7 +174,7 @@ func TestParser_ParseExpr(t *testing.T) {
 			s: `region =~ /us.*/`,
 			expr: &jepl.BinaryExpr{
 				Op:  jepl.EQREGEX,
-				LHS: &jepl.VarRef{Val: "region"},
+				LHS: &jepl.VarRef{Val: "region", Segments: []string{"region"}},
 				RHS: &jepl.RegexLiteral{Val: regexp.MustCompile(`us.*`)},
 			},
 		},
@@ -184,7 +184,7 @@ func TestParser_ParseExpr(t *testing.T) {
 			s: `url =~ /http\:\/\/www\.example\.com/`,
 			expr: &jepl.BinaryExpr{
 				Op:  jepl.EQREGEX,
-				LHS: &jepl.VarRef{Val: "url"},
+				LHS: &jepl.VarRef{Val: "url", Segments: []string{"url"}},
 				RHS: &jepl.RegexLiteral{Val: regexp.MustCompile(`http\://www\.example\.com`)},
 			},
 		},
@@ -200,7 +200,7 @@ func TestParser_ParseExpr(t *testing.T) {
 						Op: jepl.LT,
 						LHS: &jepl.BinaryExpr{
 							Op:  jepl.ADD,
-							LHS: &jepl.VarRef{Val: "value"},
+							LHS: &jepl.VarRef{Val: "value", Segments: []string{"value"}},
 							RHS: &jepl.IntegerLiteral{Val: 3},
 						},
 						RHS: &jepl.IntegerLiteral{Val: 30},

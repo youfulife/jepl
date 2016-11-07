@@ -452,32 +452,7 @@ func (p *Parser) parseVarRef() (*VarRef, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	var dtype DataType
-	if tok, _, _ := p.scan(); tok == DOUBLECOLON {
-		tok, pos, lit := p.scan()
-		switch tok {
-		case IDENT:
-			switch strings.ToLower(lit) {
-			case "float":
-				dtype = Float
-			case "integer":
-				dtype = Integer
-			case "string":
-				dtype = String
-			case "boolean":
-				dtype = Boolean
-			default:
-				return nil, newParseError(tokstr(tok, lit), []string{"float", "integer", "string", "boolean", "field", "tag"}, pos)
-			}
-		default:
-			return nil, newParseError(tokstr(tok, lit), []string{"float", "integer", "string", "boolean", "field", "tag"}, pos)
-		}
-	} else {
-		p.unscan()
-	}
-
-	vr := &VarRef{Val: strings.Join(segments, "."), Type: dtype}
+	vr := &VarRef{Val: strings.Join(segments, "."), Segments: segments}
 	return vr, nil
 }
 

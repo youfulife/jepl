@@ -107,29 +107,6 @@ func TestSelectStatement_IsRawQuerySet(t *testing.T) {
 	}
 }
 
-// Ensure binary expression names can be evaluated.
-func TestBinaryExprName(t *testing.T) {
-	for i, tt := range []struct {
-		expr string
-		name string
-	}{
-		{expr: `value + 1`, name: `value`},
-		{expr: `"user" / total`, name: `user_total`},
-		{expr: `("user" + total) / total`, name: `user_total_total`},
-	} {
-		expr, _ := jepl.ParseExpr(tt.expr)
-		switch expr := expr.(type) {
-		case *jepl.BinaryExpr:
-			name := jepl.BinaryExprName(expr)
-			if name != tt.name {
-				t.Errorf("%d. unexpected name %s, got %s", i, name, tt.name)
-			}
-		default:
-			t.Errorf("%d. unexpected expr type: %T", i, expr)
-		}
-	}
-}
-
 // Ensure that we see if a where clause has only time limitations
 func TestOnlyTimeExpr(t *testing.T) {
 	var tests = []struct {

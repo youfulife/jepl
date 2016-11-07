@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/bitly/go-simplejson"
 	"regexp"
 	"regexp/syntax"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -511,25 +511,6 @@ func walkRefs(exp Expr) []VarRef {
 	return nil
 }
 
-// ExprNames returns a list of non-"time" field names from an expression.
-func ExprNames(expr Expr) []VarRef {
-	m := make(map[VarRef]struct{})
-	for _, ref := range walkRefs(expr) {
-		if ref.Val == "time" {
-			continue
-		}
-		m[ref] = struct{}{}
-	}
-
-	a := make([]VarRef, 0, len(m))
-	for k := range m {
-		a = append(a, k)
-	}
-	sort.Sort(VarRefs(a))
-
-	return a
-}
-
 // FunctionCalls returns the Call objects from the query
 func (s *SelectStatement) FunctionCalls() []*Call {
 	var a []*Call
@@ -700,17 +681,13 @@ func (a Fields) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
 // VarRef represents a reference to a variable.
 type VarRef struct {
-	Val  string
-	Type DataType
+	Val      string
+	Segments []string
 }
 
 // String returns a string representation of the variable reference.
 func (r *VarRef) String() string {
 	buf := bytes.NewBufferString(QuoteIdent(r.Val))
-	if r.Type != Unknown {
-		buf.WriteString("::")
-		buf.WriteString(r.Type.String())
-	}
 	return buf.String()
 }
 
@@ -718,12 +695,7 @@ func (r *VarRef) String() string {
 type VarRefs []VarRef
 
 func (a VarRefs) Len() int { return len(a) }
-func (a VarRefs) Less(i, j int) bool {
-	if a[i].Val != a[j].Val {
-		return a[i].Val < a[j].Val
-	}
-	return a[i].Type < a[j].Type
-}
+
 func (a VarRefs) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
 // Strings returns a slice of the variable names.
@@ -1162,7 +1134,9 @@ func Eval(expr Expr, m map[string]interface{}) interface{} {
 	case *StringLiteral:
 		return expr.Val
 	case *VarRef:
-		switch v := m[expr.Val].(type) {
+		ms, _ := json.Marshal(m)
+		js, _ := simplejson.NewJson(ms)
+		switch v := js.GetPath(expr.Segments...).Interface().(type) {
 		case json.Number:
 			if n, err := v.Int64(); err != nil {
 				if f, err := v.Float64(); err != nil {
@@ -1173,11 +1147,13 @@ func Eval(expr Expr, m map[string]interface{}) interface{} {
 			} else {
 				return n
 			}
+		default:
+			return v
 		}
-		return m[expr.Val]
 	default:
 		return nil
 	}
+	return nil
 }
 
 func evalBinaryExpr(expr *BinaryExpr, m map[string]interface{}) interface{} {
