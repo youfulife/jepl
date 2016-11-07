@@ -519,6 +519,44 @@ func (s *SelectStatement) FunctionCalls() []*Call {
 	return a
 }
 
+// FunctionCalls returns the Call objects from the query
+func (s *SelectStatement) EvalFunctionCalls(m map[string]interface{}) {
+	for _, f := range s.Fields {
+		evalFC(f.Expr, m)
+	}
+}
+
+func evalFC(expr Expr, m map[string]interface{}) {
+	switch expr := expr.(type) {
+	case *Call:
+		switch expr.Name {
+		case "sum", "avg":
+			switch res := Eval(expr.Args[0], m).(type) {
+			case int64:
+				expr.result += float64(res)
+			case float64:
+				expr.result += res
+			}
+		}
+	case *BinaryExpr:
+		evalFC(expr.LHS, m)
+		evalFC(expr.RHS, m)
+	}
+}
+
+type Point struct {
+	metric float64
+	ts     int64
+}
+
+func (s *SelectStatement) EvalMetric() []Point {
+	points := []Point{}
+	for _, f := range s.Fields {
+		points = append(points, Point{Eval(f.Expr, nil).(float64), time.Now().Unix()})
+	}
+	return points
+}
+
 // FunctionCallsByPosition returns the Call objects from the query in the order they appear in the select statement
 func (s *SelectStatement) FunctionCallsByPosition() [][]*Call {
 	var a [][]*Call
@@ -708,8 +746,9 @@ func (a VarRefs) Strings() []string {
 
 // Call represents a function call.
 type Call struct {
-	Name string
-	Args []Expr
+	Name   string
+	Args   []Expr  // must hava not funcCall expr
+	result float64 // must be float64
 }
 
 // String returns a string representation of the call.
@@ -1097,6 +1136,8 @@ func Eval(expr Expr, m map[string]interface{}) interface{} {
 	}
 
 	switch expr := expr.(type) {
+	case *Call:
+		return expr.result
 	case *BinaryExpr:
 		return evalBinaryExpr(expr, m)
 	case *BooleanLiteral:
