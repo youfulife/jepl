@@ -478,7 +478,6 @@ func (p *Parser) parseVarRef() (*VarRef, error) {
 	}
 
 	vr := &VarRef{Val: strings.Join(segments, "."), Type: dtype}
-
 	return vr, nil
 }
 

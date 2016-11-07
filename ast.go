@@ -2,6 +2,7 @@ package jepl
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -1161,6 +1162,18 @@ func Eval(expr Expr, m map[string]interface{}) interface{} {
 	case *StringLiteral:
 		return expr.Val
 	case *VarRef:
+		switch v := m[expr.Val].(type) {
+		case json.Number:
+			if n, err := v.Int64(); err != nil {
+				if f, err := v.Float64(); err != nil {
+					fmt.Println("json Number eval Error")
+				} else {
+					return f
+				}
+			} else {
+				return n
+			}
+		}
 		return m[expr.Val]
 	default:
 		return nil
