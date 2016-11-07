@@ -157,7 +157,7 @@ func TestEval(t *testing.T) {
 		// Number literals.
 		// {in: `1 + 2`, out: int64(3)},
 		{in: `(foo*2) + ( (4/2) + (3 * 5) - 0.5 )`, out: float64(26.5), data: map[string]interface{}{"foo": float64(5)}},
-		{in: `foo / 2`, out: float64(2), data: map[string]interface{}{"foo": float64(4)}},
+		{in: `foo / 2`, out: int64(2), data: map[string]interface{}{"foo": 4}},
 		{in: `4 = 4`, out: true},
 		{in: `4 <> 4`, out: false},
 		{in: `6 > 4`, out: true},
@@ -195,10 +195,9 @@ func TestEval(t *testing.T) {
 	} {
 		// Evaluate expression.
 		out := jepl.Eval(MustParseExpr(tt.in), tt.data)
-
 		// Compare with expected output.
 		if !reflect.DeepEqual(tt.out, out) {
-			t.Errorf("%d. %s: unexpected output:\n\nexp=%#v\n\ngot=%#v\n\n", i, tt.in, tt.out, out)
+			t.Errorf("%d. %s: unexpected output:\nexp=%T, %#v\ngot=%T, %#v\n", i, tt.in, tt.out, tt.out, out, out)
 			continue
 		}
 	}

@@ -151,7 +151,6 @@ type Expr interface {
 func (*BinaryExpr) expr()     {}
 func (*BooleanLiteral) expr() {}
 func (*Call) expr()           {}
-func (*Distinct) expr()       {}
 func (*IntegerLiteral) expr() {}
 func (*nilLiteral) expr()     {}
 func (*NumberLiteral) expr()  {}
@@ -763,27 +762,6 @@ func (c *Call) Fields() []string {
 		return keys
 	default:
 		panic(fmt.Sprintf("*call.Fields is unable to provide information on %s", c.Name))
-	}
-}
-
-// Distinct represents a DISTINCT expression.
-type Distinct struct {
-	// Identifier following DISTINCT
-	Val string
-}
-
-// String returns a string representation of the expression.
-func (d *Distinct) String() string {
-	return fmt.Sprintf("DISTINCT %s", d.Val)
-}
-
-// NewCall returns a new call expression from this expressions.
-func (d *Distinct) NewCall() *Call {
-	return &Call{
-		Name: "distinct",
-		Args: []Expr{
-			&VarRef{Val: d.Val},
-		},
 	}
 }
 
