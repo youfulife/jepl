@@ -73,7 +73,8 @@ _cpu_stats
 
 ```
 ALL           AS            NI         IN
-SELECT        WHERE         FROM       
+SELECT        WHERE         FROM       AND
+OR
 ```
 
 ## Literals

@@ -420,31 +420,6 @@ func (p *Parser) parseCondition() (Expr, error) {
 	return expr, nil
 }
 
-// parseOptionalTokenAndInt parses the specified token followed
-// by an int, if it exists.
-func (p *Parser) parseOptionalTokenAndInt(t Token) (int, error) {
-	// Check if the token exists.
-	if tok, _, _ := p.scanIgnoreWhitespace(); tok != t {
-		p.unscan()
-		return 0, nil
-	}
-
-	// Scan the number.
-	tok, pos, lit := p.scanIgnoreWhitespace()
-	if tok != INTEGER {
-		return 0, newParseError(tokstr(tok, lit), []string{"integer"}, pos)
-	}
-
-	// Parse number.
-	n, _ := strconv.ParseInt(lit, 10, 64)
-	if n < 0 {
-		msg := fmt.Sprintf("%s must be >= 0", t.String())
-		return 0, &ParseError{Message: msg, Pos: pos}
-	}
-
-	return int(n), nil
-}
-
 // parseVarRef parses a reference to a measurement or field.
 func (p *Parser) parseVarRef() (*VarRef, error) {
 	// Parse the segments of the variable ref.
@@ -454,6 +429,50 @@ func (p *Parser) parseVarRef() (*VarRef, error) {
 	}
 	vr := &VarRef{Val: strings.Join(segments, "."), Segments: segments}
 	return vr, nil
+}
+
+func (p *Parser) parseList() (*ListLiteral, error) {
+	list := &ListLiteral{}
+
+	if tok, pos, lit := p.scanIgnoreWhitespace(); tok != LBRACKET {
+		p.unscan()
+		return nil, newParseError(tokstr(tok, lit), []string{"["}, pos)
+	}
+
+	for {
+		// Read next token.
+		tok, pos, lit := p.scanIgnoreWhitespace()
+		switch tok {
+		case STRING:
+			list.Vals = append(list.Vals, lit)
+		case NUMBER:
+			v, err := strconv.ParseFloat(lit, 64)
+			if err != nil {
+				return nil, &ParseError{Message: "unable to parse number", Pos: pos}
+			}
+			list.Vals = append(list.Vals, v)
+		case INTEGER:
+			v, err := strconv.ParseInt(lit, 10, 64)
+			if err != nil {
+				return nil, &ParseError{Message: "unable to parse integer", Pos: pos}
+			}
+			list.Vals = append(list.Vals, v)
+		default:
+			p.unscan()
+			return nil, newParseError(tokstr(tok, lit), []string{"string", "float", "integer"}, pos)
+		}
+
+		if tok, _, _ := p.scanIgnoreWhitespace(); tok != COMMA {
+			p.unscan()
+			break
+		}
+	}
+
+	if tok, pos, lit := p.scanIgnoreWhitespace(); tok != RBRACKET {
+		p.unscan()
+		return nil, newParseError(tokstr(tok, lit), []string{"]"}, pos)
+	}
+	return list, nil
 }
 
 // ParseExpr parses an expression.
@@ -490,6 +509,11 @@ func (p *Parser) ParseExpr() (Expr, error) {
 			if rhs.(*RegexLiteral) == nil {
 				tok, pos, lit := p.scanIgnoreWhitespace()
 				return nil, newParseError(tokstr(tok, lit), []string{"regex"}, pos)
+			}
+		} else if IsListOp(op) {
+			p.consumeWhitespace()
+			if rhs, err = p.parseList(); err != nil {
+				return nil, err
 			}
 		} else {
 			if rhs, err = p.parseUnaryExpr(); err != nil {

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bitly/go-simplejson"
+	"reflect"
 	"regexp"
 	"regexp/syntax"
 	"strconv"
@@ -851,20 +852,27 @@ func isFalseLiteral(expr Expr) bool {
 
 // ListLiteral represents a list of strings literal.
 type ListLiteral struct {
-	Vals []string
+	Vals []interface{}
 }
 
 // String returns a string representation of the literal.
 func (s *ListLiteral) String() string {
 	var buf bytes.Buffer
-	_, _ = buf.WriteString("(")
+	_, _ = buf.WriteString("[")
 	for idx, tagKey := range s.Vals {
 		if idx != 0 {
 			_, _ = buf.WriteString(", ")
 		}
-		_, _ = buf.WriteString(QuoteIdent(tagKey))
+		switch v := tagKey.(type) {
+		case string:
+			_, _ = buf.WriteString(QuoteIdent(v))
+		case float64:
+			_, _ = buf.WriteString((fmt.Sprintf("%f", v)))
+		case int64:
+			_, _ = buf.WriteString((fmt.Sprintf("%d", v)))
+		}
 	}
-	_, _ = buf.WriteString(")")
+	_, _ = buf.WriteString("]")
 	return buf.String()
 }
 
@@ -1142,6 +1150,8 @@ func Eval(expr Expr, m map[string]interface{}) interface{} {
 		return evalBinaryExpr(expr, m)
 	case *BooleanLiteral:
 		return expr.Val
+	case *ListLiteral:
+		return expr.Vals
 	case *IntegerLiteral:
 		return expr.Val
 	case *NumberLiteral:
@@ -1203,42 +1213,45 @@ func evalBinaryExpr(expr *BinaryExpr, m map[string]interface{}) interface{} {
 			}
 		}
 
-		rhs := rhsf
 		switch expr.Op {
+		case IN:
+			return in_array(lhs, rhs)
+		case NI:
+			return !in_array(lhs, rhs)
 		case EQ:
-			return ok && (lhs == rhs)
+			return ok && (lhs == rhsf)
 		case NEQ:
-			return ok && (lhs != rhs)
+			return ok && (lhs != rhsf)
 		case LT:
-			return ok && (lhs < rhs)
+			return ok && (lhs < rhsf)
 		case LTE:
-			return ok && (lhs <= rhs)
+			return ok && (lhs <= rhsf)
 		case GT:
-			return ok && (lhs > rhs)
+			return ok && (lhs > rhsf)
 		case GTE:
-			return ok && (lhs >= rhs)
+			return ok && (lhs >= rhsf)
 		case ADD:
 			if !ok {
 				return nil
 			}
-			return lhs + rhs
+			return lhs + rhsf
 		case SUB:
 			if !ok {
 				return nil
 			}
-			return lhs - rhs
+			return lhs - rhsf
 		case MUL:
 			if !ok {
 				return nil
 			}
-			return lhs * rhs
+			return lhs * rhsf
 		case DIV:
 			if !ok {
 				return nil
 			} else if rhs == 0 {
 				return float64(0)
 			}
-			return lhs / rhs
+			return lhs / rhsf
 		}
 	case int64:
 		// Try as a float64 to see if a float cast is required.
@@ -1272,46 +1285,54 @@ func evalBinaryExpr(expr *BinaryExpr, m map[string]interface{}) interface{} {
 				return lhs / rhs
 			}
 		} else {
-			rhs, ok := rhs.(int64)
+			rhsi, ok := rhs.(int64)
 			switch expr.Op {
+			case IN:
+				return in_array(lhs, rhs)
+			case NI:
+				return !in_array(lhs, rhs)
 			case EQ:
-				return ok && (lhs == rhs)
+				return ok && (lhs == rhsi)
 			case NEQ:
-				return ok && (lhs != rhs)
+				return ok && (lhs != rhsi)
 			case LT:
-				return ok && (lhs < rhs)
+				return ok && (lhs < rhsi)
 			case LTE:
-				return ok && (lhs <= rhs)
+				return ok && (lhs <= rhsi)
 			case GT:
-				return ok && (lhs > rhs)
+				return ok && (lhs > rhsi)
 			case GTE:
-				return ok && (lhs >= rhs)
+				return ok && (lhs >= rhsi)
 			case ADD:
 				if !ok {
 					return nil
 				}
-				return lhs + rhs
+				return lhs + rhsi
 			case SUB:
 				if !ok {
 					return nil
 				}
-				return lhs - rhs
+				return lhs - rhsi
 			case MUL:
 				if !ok {
 					return nil
 				}
-				return lhs * rhs
+				return lhs * rhsi
 			case DIV:
 				if !ok {
 					return nil
 				} else if rhs == 0 {
 					return float64(0)
 				}
-				return lhs / rhs
+				return lhs / rhsi
 			}
 		}
 	case string:
 		switch expr.Op {
+		case IN:
+			return in_array(lhs, rhs)
+		case NI:
+			return !in_array(lhs, rhs)
 		case EQ:
 			rhs, ok := rhs.(string)
 			return ok && lhs == rhs
@@ -1327,6 +1348,23 @@ func evalBinaryExpr(expr *BinaryExpr, m map[string]interface{}) interface{} {
 		}
 	}
 	return nil
+}
+
+func in_array(val interface{}, array interface{}) (exists bool) {
+	exists = false
+
+	switch reflect.TypeOf(array).Kind() {
+	case reflect.Slice:
+		s := reflect.ValueOf(array)
+
+		for i := 0; i < s.Len(); i++ {
+			if reflect.DeepEqual(val, s.Index(i).Interface()) == true {
+				exists = true
+				return
+			}
+		}
+	}
+	return
 }
 
 // EvalBool evaluates expr and returns true if result is a boolean true.

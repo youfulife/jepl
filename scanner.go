@@ -561,6 +561,10 @@ func IsRegexOp(t Token) bool {
 	return (t == EQREGEX || t == NEQREGEX)
 }
 
+func IsListOp(t Token) bool {
+	return (t == IN || t == NI)
+}
+
 // assert will panic with a given formatted message if the given condition is false.
 func assert(condition bool, msg string, v ...interface{}) {
 	if !condition {

@@ -50,6 +50,8 @@ func TestScanner_Scan(t *testing.T) {
 		{s: `and`, tok: jepl.AND},
 		{s: `OR`, tok: jepl.OR},
 		{s: `or`, tok: jepl.OR},
+		{s: `NI`, tok: jepl.NI},
+		{s: `IN`, tok: jepl.IN},
 
 		{s: `=`, tok: jepl.EQ},
 		{s: `!=`, tok: jepl.NEQ},
@@ -114,8 +116,6 @@ func TestScanner_Scan(t *testing.T) {
 		// Keywords
 		{s: `ALL`, tok: jepl.ALL},
 		{s: `FROM`, tok: jepl.FROM},
-		{s: `NI`, tok: jepl.NI},
-		{s: `IN`, tok: jepl.IN},
 		{s: `SELECT`, tok: jepl.SELECT},
 		{s: `WHERE`, tok: jepl.WHERE},
 	}

@@ -38,6 +38,8 @@ const (
 
 	AND // AND
 	OR  // OR
+	NI  // not in
+	IN
 
 	EQ       // =
 	NEQ      // !=
@@ -63,8 +65,6 @@ const (
 	ALL
 	AS
 	FROM
-	NI // not in
-	IN
 	SELECT
 	WHERE
 	keywordEnd
@@ -92,6 +92,8 @@ var tokens = [...]string{
 
 	AND: "AND",
 	OR:  "OR",
+	NI:  "NI",
+	IN:  "IN",
 
 	EQ:       "=",
 	NEQ:      "!=",
@@ -115,8 +117,6 @@ var tokens = [...]string{
 	ALL:    "ALL",
 	AS:     "AS",
 	FROM:   "FROM",
-	NI:     "NI",
-	IN:     "IN",
 	SELECT: "SELECT",
 	WHERE:  "WHERE",
 }
@@ -128,7 +128,7 @@ func init() {
 	for tok := keywordBeg + 1; tok < keywordEnd; tok++ {
 		keywords[strings.ToLower(tokens[tok])] = tok
 	}
-	for _, tok := range []Token{AND, OR} {
+	for _, tok := range []Token{AND, OR, IN, NI} {
 		keywords[strings.ToLower(tokens[tok])] = tok
 	}
 	keywords["true"] = TRUE
@@ -150,12 +150,14 @@ func (tok Token) Precedence() int {
 		return 1
 	case AND:
 		return 2
-	case EQ, NEQ, EQREGEX, NEQREGEX, LT, LTE, GT, GTE:
+	case IN, NI:
 		return 3
-	case ADD, SUB:
+	case EQ, NEQ, EQREGEX, NEQREGEX, LT, LTE, GT, GTE:
 		return 4
-	case MUL, DIV:
+	case ADD, SUB:
 		return 5
+	case MUL, DIV:
+		return 6
 	}
 	return 0
 }

@@ -155,7 +155,13 @@ func TestEval(t *testing.T) {
 		data map[string]interface{}
 	}{
 		// Number literals.
-		// {in: `1 + 2`, out: int64(3)},
+		{in: `uid IN [1,2,3]`, out: true, data: map[string]interface{}{"uid": 1}},
+		{in: `uid IN [1,2,3]`, out: false, data: map[string]interface{}{"uid": 4}},
+		{in: `uid NI [1,2,3]`, out: false, data: map[string]interface{}{"uid": 1}},
+		{in: `uid NI [1,2,3]`, out: true, data: map[string]interface{}{"uid": 4}},
+		{in: `foo IN ['xxx','yyy','zzz']`, out: true, data: map[string]interface{}{"foo": "xxx"}},
+		{in: `foo NI ['xxx','yyy','zzz']`, out: true, data: map[string]interface{}{"foo": "uuu"}},
+		{in: `1 + 2`, out: int64(3)},
 		{in: `(foo*2) + ( (4/2) + (3 * 5) - 0.5 )`, out: float64(26.5), data: map[string]interface{}{"foo": float64(5)}},
 		{in: `foo / 2`, out: int64(2), data: map[string]interface{}{"foo": 4}},
 		{in: `4 = 4`, out: true},
