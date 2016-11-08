@@ -1145,7 +1145,9 @@ func Eval(expr Expr, m map[string]interface{}) interface{} {
 
 	switch expr := expr.(type) {
 	case *Call:
-		return expr.result
+		res := expr.result
+		expr.result = 0
+		return res
 	case *BinaryExpr:
 		return evalBinaryExpr(expr, m)
 	case *BooleanLiteral:
