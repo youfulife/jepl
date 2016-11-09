@@ -10,24 +10,6 @@ import (
 	"testing"
 )
 
-// Ensure the parser can parse an empty query.
-func TestParser_ParseQuery_Empty(t *testing.T) {
-	q, err := jepl.NewParser(strings.NewReader(``)).ParseQuery()
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	} else if len(q.Statements) != 0 {
-		t.Fatalf("unexpected statement count: %d", len(q.Statements))
-	}
-}
-
-// Ensure the parser can return an error from an malformed statement.
-func TestParser_ParseQuery_ParseError(t *testing.T) {
-	_, err := jepl.NewParser(strings.NewReader(`SELECT`)).ParseQuery()
-	if err == nil || err.Error() != `found EOF, expected identifier, string, number, bool at line 1, char 8` {
-		t.Fatalf("unexpected error: %s", err)
-	}
-}
-
 // Ensure the parser can parse strings into Statement ASTs.
 func TestParser_ParseStatement(t *testing.T) {
 	// For use in various tests.
@@ -61,9 +43,6 @@ func TestParser_ParseStatement(t *testing.T) {
 			continue
 		}
 		p := jepl.NewParser(strings.NewReader(tt.s))
-		if tt.params != nil {
-			p.SetParams(tt.params)
-		}
 		stmt, err := p.ParseStatement()
 
 		if !reflect.DeepEqual(tt.err, errstring(err)) {

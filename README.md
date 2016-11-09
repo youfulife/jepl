@@ -66,7 +66,7 @@ cpu
 _cpu_stats
 "1h"
 "anything really"
-"1_Crazy-1337.identifier>NAME👍"
+"1_Crazy-1337.identifier>NAME"
 ```
 
 ## Keywords

@@ -85,7 +85,6 @@ type Node interface {
 	String() string
 }
 
-func (*Query) node()     {}
 func (Statements) node() {}
 
 func (*SelectStatement) node() {}
@@ -107,14 +106,6 @@ func (Sources) node()         {}
 func (*StringLiteral) node()  {}
 func (*VarRef) node()         {}
 func (*Wildcard) node()       {}
-
-// Query represents a collection of ordered statements.
-type Query struct {
-	Statements Statements
-}
-
-// String returns a string representation of the query.
-func (q *Query) String() string { return q.Statements.String() }
 
 // Statements represents a list of statements.
 type Statements []Statement
@@ -1100,9 +1091,6 @@ func Walk(v Visitor, node Node) {
 
 	case *ParenExpr:
 		Walk(v, n.Expr)
-
-	case *Query:
-		Walk(v, n.Statements)
 
 	case *SelectStatement:
 		Walk(v, n.Fields)

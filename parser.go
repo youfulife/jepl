@@ -2,7 +2,6 @@ package jepl
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -12,8 +11,7 @@ import (
 
 // Parser represents an InfluxQL parser.
 type Parser struct {
-	s      *bufScanner
-	params map[string]interface{}
+	s *bufScanner
 }
 
 // NewParser returns a new instance of Parser.
@@ -21,45 +19,9 @@ func NewParser(r io.Reader) *Parser {
 	return &Parser{s: newBufScanner(r)}
 }
 
-// SetParams sets the parameters that will be used for any bound parameter substitutions.
-func (p *Parser) SetParams(params map[string]interface{}) {
-	p.params = params
-}
-
-// ParseQuery parses a query string and returns its AST representation.
-func ParseQuery(s string) (*Query, error) { return NewParser(strings.NewReader(s)).ParseQuery() }
-
 // ParseStatement parses a statement string and returns its AST representation.
 func ParseStatement(s string) (Statement, error) {
 	return NewParser(strings.NewReader(s)).ParseStatement()
-}
-
-// ParseExpr parses an expression string and returns its AST representation.
-func ParseExpr(s string) (Expr, error) { return NewParser(strings.NewReader(s)).ParseExpr() }
-
-// ParseQuery parses an InfluxQL string and returns a Query AST object.
-func (p *Parser) ParseQuery() (*Query, error) {
-	var statements Statements
-	semi := true
-
-	for {
-		if tok, pos, lit := p.scanIgnoreWhitespace(); tok == EOF {
-			return &Query{Statements: statements}, nil
-		} else if tok == SEMICOLON {
-			semi = true
-		} else {
-			if !semi {
-				return nil, newParseError(tokstr(tok, lit), []string{";"}, pos)
-			}
-			p.unscan()
-			s, err := p.ParseStatement()
-			if err != nil {
-				return nil, err
-			}
-			statements = append(statements, s)
-			semi = false
-		}
-	}
 }
 
 // ParseStatement parses an InfluxQL string and returns a Statement AST object.
@@ -74,59 +36,6 @@ func (p *Parser) ParseStatement() (Statement, error) {
 	}
 }
 
-// parseInt parses a string and returns an integer literal.
-func (p *Parser) parseInt(min, max int) (int, error) {
-	tok, pos, lit := p.scanIgnoreWhitespace()
-	if tok != INTEGER {
-		return 0, newParseError(tokstr(tok, lit), []string{"integer"}, pos)
-	}
-
-	// Convert string to int.
-	n, err := strconv.Atoi(lit)
-	if err != nil {
-		return 0, &ParseError{Message: err.Error(), Pos: pos}
-	} else if min > n || n > max {
-		return 0, &ParseError{
-			Message: fmt.Sprintf("invalid value %d: must be %d <= n <= %d", n, min, max),
-			Pos:     pos,
-		}
-	}
-
-	return n, nil
-}
-
-// parseUInt32 parses a string and returns a 32-bit unsigned integer literal.
-func (p *Parser) parseUInt32() (uint32, error) {
-	tok, pos, lit := p.scanIgnoreWhitespace()
-	if tok != INTEGER {
-		return 0, newParseError(tokstr(tok, lit), []string{"integer"}, pos)
-	}
-
-	// Convert string to unsigned 32-bit integer
-	n, err := strconv.ParseUint(lit, 10, 32)
-	if err != nil {
-		return 0, &ParseError{Message: err.Error(), Pos: pos}
-	}
-
-	return uint32(n), nil
-}
-
-// parseUInt64 parses a string and returns a 64-bit unsigned integer literal.
-func (p *Parser) parseUInt64() (uint64, error) {
-	tok, pos, lit := p.scanIgnoreWhitespace()
-	if tok != INTEGER {
-		return 0, newParseError(tokstr(tok, lit), []string{"integer"}, pos)
-	}
-
-	// Convert string to unsigned 64-bit integer
-	n, err := strconv.ParseUint(lit, 10, 64)
-	if err != nil {
-		return 0, &ParseError{Message: err.Error(), Pos: pos}
-	}
-
-	return uint64(n), nil
-}
-
 // parseIdent parses an identifier.
 func (p *Parser) parseIdent() (string, error) {
 	tok, pos, lit := p.scanIgnoreWhitespace()
@@ -134,30 +43,6 @@ func (p *Parser) parseIdent() (string, error) {
 		return "", newParseError(tokstr(tok, lit), []string{"identifier"}, pos)
 	}
 	return lit, nil
-}
-
-// parseIdentList parses a comma delimited list of identifiers.
-func (p *Parser) parseIdentList() ([]string, error) {
-	// Parse first (required) identifier.
-	ident, err := p.parseIdent()
-	if err != nil {
-		return nil, err
-	}
-	idents := []string{ident}
-
-	// Parse remaining (optional) identifiers.
-	for {
-		if tok, _, _ := p.scanIgnoreWhitespace(); tok != COMMA {
-			p.unscan()
-			return idents, nil
-		}
-
-		if ident, err = p.parseIdent(); err != nil {
-			return nil, err
-		}
-
-		idents = append(idents, ident)
-	}
 }
 
 // parseSegmentedIdents parses a segmented identifiers.
@@ -185,39 +70,6 @@ func (p *Parser) parseSegmentedIdents() ([]string, error) {
 	}
 
 	return idents, nil
-}
-
-// parserString parses a string.
-func (p *Parser) parseString() (string, error) {
-	tok, pos, lit := p.scanIgnoreWhitespace()
-	if tok != STRING {
-		return "", newParseError(tokstr(tok, lit), []string{"string"}, pos)
-	}
-	return lit, nil
-}
-
-// parserString parses a string.
-func (p *Parser) parseStringList() ([]string, error) {
-	// Parse first (required) string.
-	str, err := p.parseString()
-	if err != nil {
-		return nil, err
-	}
-	strs := []string{str}
-
-	// Parse remaining (optional) strings.
-	for {
-		if tok, _, _ := p.scanIgnoreWhitespace(); tok != COMMA {
-			p.unscan()
-			return strs, nil
-		}
-
-		if str, err = p.parseString(); err != nil {
-			return nil, err
-		}
-
-		strs = append(strs, str)
-	}
 }
 
 // parseSelectStatement parses a select string and returns a Statement AST object.
@@ -258,14 +110,6 @@ func (p *Parser) parseSelectStatement() (*SelectStatement, error) {
 
 	return stmt, nil
 }
-
-// targetRequirement specifies whether or not a target clause is required.
-type targetRequirement int
-
-const (
-	targetRequired targetRequirement = iota
-	targetNotRequired
-)
 
 // parseFields parses a list of one or more fields.
 func (p *Parser) parseFields() (Fields, error) {
@@ -591,29 +435,6 @@ func (p *Parser) parseUnaryExpr() (Expr, error) {
 			return nil, &ParseError{Message: err.Error(), Pos: pos}
 		}
 		return &RegexLiteral{Val: re}, nil
-	case BOUNDPARAM:
-		k := strings.TrimPrefix(lit, "$")
-		if len(k) == 0 {
-			return nil, errors.New("empty bound parameter")
-		}
-
-		v, ok := p.params[k]
-		if !ok {
-			return nil, fmt.Errorf("missing parameter: %s", k)
-		}
-
-		switch v := v.(type) {
-		case float64:
-			return &NumberLiteral{Val: v}, nil
-		case int64:
-			return &IntegerLiteral{Val: v}, nil
-		case string:
-			return &StringLiteral{Val: v}, nil
-		case bool:
-			return &BooleanLiteral{Val: v}, nil
-		default:
-			return nil, fmt.Errorf("unable to bind parameter with type %T", v)
-		}
 	default:
 		return nil, newParseError(tokstr(tok, lit), []string{"identifier", "string", "number", "bool"}, pos)
 	}
@@ -731,27 +552,6 @@ func (p *Parser) consumeWhitespace() {
 
 // unscan pushes the previously read token back onto the buffer.
 func (p *Parser) unscan() { p.s.Unscan() }
-
-// parseTokens consumes an expected sequence of tokens.
-func (p *Parser) parseTokens(toks []Token) error {
-	for _, expected := range toks {
-		if tok, pos, lit := p.scanIgnoreWhitespace(); tok != expected {
-			return newParseError(tokstr(tok, lit), []string{tokens[expected]}, pos)
-		}
-	}
-	return nil
-}
-
-// parseTokenMaybe consumes the next token if it matches the expected one and
-// does nothing if the next token is not the next one.
-func (p *Parser) parseTokenMaybe(expected Token) bool {
-	tok, _, _ := p.scanIgnoreWhitespace()
-	if tok != expected {
-		p.unscan()
-		return false
-	}
-	return true
-}
 
 var (
 	qsReplacer = strings.NewReplacer("\n", `\n`, `\`, `\\`, `'`, `\'`)
