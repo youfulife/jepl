@@ -28,8 +28,6 @@ func TestScanner_Scan(t *testing.T) {
 		{s: ``, tok: jepl.EOF},
 		{s: `#`, tok: jepl.ILLEGAL, lit: `#`},
 		{s: ` `, tok: jepl.WS, lit: " "},
-		{s: `$`, tok: jepl.BOUNDPARAM, lit: "$"},
-		{s: `$1`, tok: jepl.BOUNDPARAM, lit: "$1"},
 		{s: "\t", tok: jepl.WS, lit: "\t"},
 		{s: "\n", tok: jepl.WS, lit: "\n"},
 		{s: "\r", tok: jepl.WS, lit: "\n"},
@@ -67,12 +65,9 @@ func TestScanner_Scan(t *testing.T) {
 		{s: `]`, tok: jepl.RBRACKET},
 		{s: `)`, tok: jepl.RPAREN},
 		{s: `,`, tok: jepl.COMMA},
-		{s: `;`, tok: jepl.SEMICOLON},
 		{s: `.`, tok: jepl.DOT},
 		{s: `=~`, tok: jepl.EQREGEX},
 		{s: `!~`, tok: jepl.NEQREGEX},
-		{s: `:`, tok: jepl.COLON},
-		{s: `::`, tok: jepl.DOUBLECOLON},
 
 		// Identifiers
 		{s: `foo`, tok: jepl.IDENT, lit: `foo`},
@@ -84,8 +79,6 @@ func TestScanner_Scan(t *testing.T) {
 		{s: `"foo\"bar\""`, tok: jepl.IDENT, lit: `foo"bar"`},
 		{s: `test"`, tok: jepl.BADSTRING, lit: "", pos: jepl.Pos{Line: 0, Char: 3}},
 		{s: `"test`, tok: jepl.BADSTRING, lit: `test`},
-		{s: `$host`, tok: jepl.BOUNDPARAM, lit: `$host`},
-		{s: `$"host param"`, tok: jepl.BOUNDPARAM, lit: `$host param`},
 
 		{s: `true`, tok: jepl.TRUE},
 		{s: `false`, tok: jepl.FALSE},

@@ -120,13 +120,9 @@ regex_lit           = "/" { unicode_char } "/"
 `=~` matches against
 `!~` doesn't match against
 
-## Queries
-
-A query is composed of one or more statements separated by a semicolon.
+## Statement
 
 ```
-query            = statement { ";" statement }
-
 statement        = select_stmt
 ```
 ### SELECT

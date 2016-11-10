@@ -16,17 +16,16 @@ const (
 
 	literalBeg
 	// IDENT and the following are InfluxQL literal tokens.
-	IDENT      // main
-	BOUNDPARAM // $param
-	NUMBER     // 12345.67
-	INTEGER    // 12345
-	STRING     // "abc"
-	BADSTRING  // "abc
-	BADESCAPE  // \q
-	TRUE       // true
-	FALSE      // false
-	REGEX      // Regular expressions
-	BADREGEX   // `.*
+	IDENT     // main
+	NUMBER    // 12345.67
+	INTEGER   // 12345
+	STRING    // "abc"
+	BADSTRING // "abc
+	BADESCAPE // \q
+	TRUE      // true
+	FALSE     // false
+	REGEX     // Regular expressions
+	BADREGEX  // `.*
 	literalEnd
 
 	operatorBeg
@@ -51,15 +50,12 @@ const (
 	GTE      // >=
 	operatorEnd
 
-	LBRACKET    // [
-	LPAREN      // (
-	RBRACKET    // ]
-	RPAREN      // )
-	COMMA       // ,
-	COLON       // :
-	DOUBLECOLON // ::
-	SEMICOLON   // ;
-	DOT         // .
+	LBRACKET // [
+	LPAREN   // (
+	RBRACKET // ]
+	RPAREN   // )
+	COMMA    // ,
+	DOT      // .
 
 	keywordBeg
 	ALL
@@ -104,15 +100,12 @@ var tokens = [...]string{
 	GT:       ">",
 	GTE:      ">=",
 
-	LBRACKET:    "[",
-	LPAREN:      "(",
-	RBRACKET:    "]",
-	RPAREN:      ")",
-	COMMA:       ",",
-	COLON:       ":",
-	DOUBLECOLON: "::",
-	SEMICOLON:   ";",
-	DOT:         ".",
+	LBRACKET: "[",
+	LPAREN:   "(",
+	RBRACKET: "]",
+	RPAREN:   ")",
+	COMMA:    ",",
+	DOT:      ".",
 
 	ALL:    "ALL",
 	AS:     "AS",
