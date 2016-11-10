@@ -10,58 +10,66 @@ import (
 	"testing"
 )
 
-// Ensure the parser can parse strings into Statement ASTs.
-func TestParser_ParseStatement(t *testing.T) {
+// Ensure the parser can only parse select statement
+func TestParseStatement(t *testing.T) {
 	// For use in various tests.
 	var tests = []struct {
-		skip   bool
-		s      string
-		params map[string]interface{}
-		stmt   jepl.Statement
-		err    string
+		s    string
+		stmt jepl.Statement
+		err  string
 	}{
 		// Errors
 		{s: ``, err: `found EOF, expected SELECT at line 1, char 1`},
-		{s: `SELECT`, err: `found EOF, expected identifier, string, number, bool at line 1, char 8`},
-		{s: `SELECT count(max(value)) FROM myseries`, err: `expected field argument in count()`},
-		{s: `SELECT count(distinct('value')) FROM myseries`, err: `expected field argument in count()`},
-		{s: `SELECT min(max(value)) FROM myseries`, err: `expected field argument in min()`},
-		{s: `SELECT min(distinct(value)) FROM myseries`, err: `expected field argument in min()`},
-		{s: `SELECT max(max(value)) FROM myseries`, err: `expected field argument in max()`},
-		{s: `SELECT sum(max(value)) FROM myseries`, err: `expected field argument in sum()`},
-		{s: `SELECT count(value), value FROM foo`, err: `mixing aggregate and non-aggregate queries is not supported`},
-		{s: `select count() from myseries`, err: `invalid number of arguments for count, expected 1, got 0`},
-
-		{s: `SELECT value = 2 FROM cpu`, err: `invalid operator = in SELECT clause at line 1, char 8; operator is intended for WHERE clause`},
-		{s: `SELECT s =~ /foo/ FROM cpu`, err: `invalid operator =~ in SELECT clause at line 1, char 8; operator is intended for WHERE clause`},
-		{s: `SELECT count(foo + sum(bar)) FROM cpu`, err: `expected field argument in count()`},
-		{s: `SELECT (count(foo + sum(bar))) FROM cpu`, err: `expected field argument in count()`},
-		{s: `SELECT sum(value) + count(foo + sum(bar)) FROM cpu`, err: `binary expressions cannot mix aggregates and raw fields`},
+		{s: `CREATE`, err: `found CREATE, expected SELECT at line 1, char 1`},
+		{s: `SELECT sum(x) FROM Packetbeat`, err: ``},
 	}
 	for i, tt := range tests {
-		if tt.skip {
-			continue
-		}
 		p := jepl.NewParser(strings.NewReader(tt.s))
-		stmt, err := p.ParseStatement()
+		_, err := p.ParseStatement()
 
 		if !reflect.DeepEqual(tt.err, errstring(err)) {
 			t.Errorf("%d. %q: error mismatch:\n  exp=%s\n  got=%s\n\n", i, tt.s, tt.err, err)
-		} else if tt.err == "" {
-			if !reflect.DeepEqual(tt.stmt, stmt) {
-				t.Logf("\n# %s\nexp=%s\ngot=%s\n", tt.s, mustMarshalJSON(tt.stmt), mustMarshalJSON(stmt))
-				t.Logf("\nSQL exp=%s\nSQL got=%s\n", tt.stmt.String(), stmt.String())
-				t.Errorf("%d. %q\n\nstmt mismatch:\n\nexp=%#v\n\ngot=%#v\n\n", i, tt.s, tt.stmt, stmt)
-			} else {
-				stmt2, err := jepl.ParseStatement(stmt.String())
-				if err != nil {
-					t.Errorf("%d. %q: unable to parse statement string: %s", i, stmt.String(), err)
-				} else if !reflect.DeepEqual(tt.stmt, stmt2) {
-					t.Logf("\n# %s\nexp=%s\ngot=%s\n", tt.s, mustMarshalJSON(tt.stmt), mustMarshalJSON(stmt2))
-					t.Logf("\nSQL exp=%s\nSQL got=%s\n", tt.stmt.String(), stmt2.String())
-					t.Errorf("%d. %q\n\nstmt reparse mismatch:\n\nexp=%#v\n\ngot=%#v\n\n", i, tt.s, tt.stmt, stmt2)
-				}
-			}
+		}
+	}
+}
+
+// Ensure the parser can parse strings into Statement ASTs.
+func TestParseSelectStatement(t *testing.T) {
+	// For use in various tests.
+	var tests = []struct {
+		s   string
+		err string
+	}{
+		// Errors
+		{s: `SELECT`, err: `found EOF, expected identifier, string, number, bool at line 1, char 8`},
+		{s: `select 7 from foo`, err: `invalid field 7 in SELECT field, at least one function`},
+		{s: `SELECT count(max(value)) FROM myseries`, err: `expected only field argument in count()`},
+		{s: `SELECT count(7 * in_bytes) FROM myseries`, err: `expected only field argument in count()`},
+		{s: `SELECT count(value), value FROM foo`, err: `invalid field value in SELECT field, at least one function`},
+		{s: `select count() from myseries`, err: `invalid number of arguments for count, expected 1, got 0`},
+
+		{s: `SELECT value = 2 FROM cpu`, err: `invalid operator = in SELECT field, only support +-*/`},
+		{s: `SELECT s =~ /foo/ FROM cpu`, err: `invalid operator =~ in SELECT field, only support +-*/`},
+		{s: `SELECT count(foo + sum(bar)) FROM cpu`, err: `expected only field argument in count()`},
+		{s: `SELECT (count(foo + sum(bar))) FROM cpu`, err: `expected only field argument in count()`},
+		{s: `SELECT sum(value) + count(foo + sum(bar)) FROM cpu`, err: `binary expressions cannot mix aggregates and raw fields`},
+
+		// Correct
+		{s: `SELECT count(x) from foo`, err: ``},
+		{s: `SELECT sum(x) from foo`, err: ``},
+		{s: `SELECT avg(x) from foo`, err: ``},
+		{s: `SELECT count(x), sum(x) from foo`, err: ``},
+		{s: `SELECT count(x), sum(x)+sum(y) from foo`, err: ``},
+		{s: `SELECT sum(x + y *6 /z) from foo`, err: ``},
+		{s: `SELECT sum(x) * (sum(y) / sum(z)) from foo`, err: ``},
+	}
+	for i, tt := range tests {
+
+		p := jepl.NewParser(strings.NewReader(tt.s))
+		_, err := p.ParseStatement()
+
+		if !reflect.DeepEqual(tt.err, errstring(err)) {
+			t.Errorf("%d. %q: error mismatch:\n  exp=%s\n  got=%s\n\n", i, tt.s, tt.err, err)
 		}
 	}
 }

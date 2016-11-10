@@ -346,11 +346,20 @@ func (s *SelectStatement) validate() error {
 
 func (s *SelectStatement) validateFields() error {
 	for _, f := range s.Fields {
+		var c validateField
+		Walk(&c, f.Expr)
+		if c.foundInvalid {
+			return fmt.Errorf("invalid operator %s in SELECT field, only support +-*/", c.badToken)
+		}
 		switch expr := f.Expr.(type) {
 		case *BinaryExpr:
 			if err := expr.validate(); err != nil {
 				return err
 			}
+		case *ParenExpr:
+		case *Call:
+		default:
+			return fmt.Errorf("invalid field %v in SELECT field, at least one function", expr)
 		}
 	}
 	return nil
@@ -412,7 +421,7 @@ func (s *SelectStatement) validateAggregates() error {
 			}
 			if expr.Name == "count" {
 				if _, ok := expr.Args[0].(*VarRef); !ok {
-					return fmt.Errorf("expected field argument in count()")
+					return fmt.Errorf("expected only field argument in count()")
 				}
 			}
 			switch fc := expr.Args[0].(type) {
@@ -911,7 +920,9 @@ func (e *BinaryExpr) validateArgs() error {
 	if v.err != nil {
 		return v.err
 	} else if v.calls {
-		return errors.New("argument binary expressions cannot mix aggregates")
+		return errors.New("argument binary expressions cannot mix function")
+	} else if !v.refs {
+		return errors.New("argument binary expressions at least one key")
 	}
 	return nil
 }
@@ -930,12 +941,6 @@ func (v *binaryExprValidator) Visit(n Node) Visitor {
 	switch n := n.(type) {
 	case *Call:
 		v.calls = true
-
-		if n.Name == "top" || n.Name == "bottom" {
-			v.err = fmt.Errorf("cannot use %s() inside of a binary expression", n.Name)
-			return nil
-		}
-
 		for _, expr := range n.Args {
 			switch e := expr.(type) {
 			case *BinaryExpr:

@@ -137,19 +137,14 @@ func (p *Parser) parseFields() (Fields, error) {
 // parseField parses a single field.
 func (p *Parser) parseField() (*Field, error) {
 	f := &Field{}
-	_, pos, _ := p.scanIgnoreWhitespace()
+	p.scanIgnoreWhitespace()
 	p.unscan()
-	// Parse the expression first.
+	// field must expr.
 	expr, err := p.ParseExpr()
 	if err != nil {
 		return nil, err
 	}
 
-	var c validateField
-	Walk(&c, expr)
-	if c.foundInvalid {
-		return nil, fmt.Errorf("invalid operator %s in SELECT clause at line %d, char %d; operator is intended for WHERE clause", c.badToken, pos.Line+1, pos.Char+1)
-	}
 	f.Expr = expr
 
 	// Parse the alias if the current and next tokens are "WS AS".
@@ -179,9 +174,7 @@ func (c *validateField) Visit(n Node) Visitor {
 	}
 
 	switch e.Op {
-	case EQ, NEQ, EQREGEX,
-		NEQREGEX, LT, LTE, GT, GTE,
-		AND, OR:
+	case EQ, NEQ, EQREGEX, NEQREGEX, LT, LTE, GT, GTE, AND, OR, IN, NI:
 		c.foundInvalid = true
 		c.badToken = e.Op
 		return nil
