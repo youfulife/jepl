@@ -546,8 +546,8 @@ func evalFC(expr Expr, m map[string]interface{}) {
 }
 
 type Point struct {
-	metric float64
-	ts     int64
+	Metric float64
+	TS     int64
 }
 
 func (s *SelectStatement) EvalMetric() []Point {
