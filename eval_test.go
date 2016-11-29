@@ -8,7 +8,7 @@ import (
 )
 
 func TestEvalQuery(t *testing.T) {
-	s := "select avg(tcp.in_pkts)/avg(tcp.out_pkts), sum(tcp.in_bytes + tcp.out_bytes) AS tcp_total_bytes from packetbeat where uid = 1"
+	s := "select max(tcp.in_pkts), min(tcp.in_pkts), count(tcp.in_pkts), sum(tcp.in_pkts), avg(tcp.in_pkts) from packetbeat where uid = 1"
 
 	stmt, err := jepl.ParseStatement(s)
 	if err != nil {
@@ -19,10 +19,10 @@ func TestEvalQuery(t *testing.T) {
 	// fcs := stmt.(*jepl.SelectStatement).FunctionCalls()
 
 	for i := 0; i < 10; i++ {
-		js, _ := simplejson.NewJson([]byte(`{
+		js, _ := simplejson.NewJson([]byte(fmt.Sprintf(`{
             "uid": 1,
-            "tcp": {"in_bytes":10, "out_bytes": 20, "in_pkts": 50, "out_pkts": 20}
-        }`))
+            "tcp": {"in_bytes":%d, "out_bytes": 20, "in_pkts": %d, "out_pkts": 2}
+        }`, i*10, i)))
 		switch res := jepl.Eval(cond, js.MustMap()).(type) {
 		case bool:
 			if res == true {

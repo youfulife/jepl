@@ -481,7 +481,7 @@ func (p *Parser) parseCall(name string) (*Call, error) {
 	} else {
 		// If there's a right paren then just return immediately.
 		if tok, _, _ := p.scan(); tok == RPAREN {
-			return &Call{Name: name}, nil
+			return &Call{Name: name, First: true}, nil
 		}
 		p.unscan()
 
@@ -521,7 +521,7 @@ func (p *Parser) parseCall(name string) (*Call, error) {
 		return nil, newParseError(tokstr(tok, lit), []string{")"}, pos)
 	}
 
-	return &Call{Name: name, Args: args}, nil
+	return &Call{Name: name, Args: args, First: true}, nil
 }
 
 // scan returns the next token from the underlying scanner.

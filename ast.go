@@ -221,6 +221,8 @@ type SelectStatement struct {
 
 	// Removes duplicate rows from raw queries.
 	Dedupe bool
+
+	Count int
 }
 
 // matchExactRegex matches regexes that have the following form: /^foo$/. It
@@ -530,6 +532,8 @@ func (s *SelectStatement) EvalFunctionCalls(m map[string]interface{}) {
 func evalFC(expr Expr, m map[string]interface{}) {
 	switch expr := expr.(type) {
 	case *Call:
+		expr.Count += 1
+		
 		switch expr.Name {
 		case "sum", "avg":
 			switch res := Eval(expr.Args[0], m).(type) {
@@ -538,6 +542,41 @@ func evalFC(expr Expr, m map[string]interface{}) {
 			case float64:
 				expr.result += res
 			}
+		case "max":
+			var thisret float64
+			switch res := Eval(expr.Args[0], m).(type) {
+			case int64:
+				thisret = float64(res)
+			case float64:
+				thisret = res
+			}
+			if expr.First {
+				expr.result = thisret
+				expr.First = false
+			} else {
+				if thisret > expr.result {
+					expr.result = thisret
+				}
+			}
+
+		case "min":
+			var thisret float64
+			switch res := Eval(expr.Args[0], m).(type) {
+			case int64:
+				thisret = float64(res)
+			case float64:
+				thisret = res
+			}
+			if expr.First {
+				expr.result = thisret
+				expr.First = false
+			} else {
+				if thisret < expr.result {
+					expr.result = thisret
+				}
+			}
+
+
 		}
 	case *BinaryExpr:
 		evalFC(expr.LHS, m)
@@ -750,6 +789,8 @@ type Call struct {
 	Name   string
 	Args   []Expr  // must hava not funcCall expr
 	result float64 // must be float64
+	First  bool
+	Count  int
 }
 
 // String returns a string representation of the call.
@@ -1138,9 +1179,24 @@ func Eval(expr Expr, m map[string]interface{}) interface{} {
 
 	switch expr := expr.(type) {
 	case *Call:
-		res := expr.result
-		expr.result = 0
-		return res
+		var ret interface{}
+
+		if expr.Name == "count" {
+			ret = float64(expr.Count)
+		} else {
+			ret = expr.result
+			if expr.Name == "avg" {
+				if expr.Count > 0 {
+					ret = expr.result / float64(expr.Count)
+				}
+			}
+		}
+
+		expr.result = 0.0
+		expr.First = true
+		expr.Count = 0
+
+		return ret
 	case *BinaryExpr:
 		return evalBinaryExpr(expr, m)
 	case *BooleanLiteral:

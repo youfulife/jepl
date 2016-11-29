@@ -206,7 +206,7 @@ func TestParser_ParseExpr(t *testing.T) {
 		{
 			s: `my_func()`,
 			expr: &jepl.Call{
-				Name: "my_func",
+				Name: "my_func", First: true,
 			},
 		},
 
@@ -215,6 +215,7 @@ func TestParser_ParseExpr(t *testing.T) {
 			s: `my_func(1, 2 + 3)`,
 			expr: &jepl.Call{
 				Name: "my_func",
+				First: true,
 				Args: []jepl.Expr{
 					&jepl.IntegerLiteral{Val: 1},
 					&jepl.BinaryExpr{
