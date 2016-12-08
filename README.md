@@ -51,8 +51,7 @@ The rules:
 - may contain only ASCII letters, decimal digits, and "_"
 
 ```
-identifier          = unquoted_identifier
-unquoted_identifier = ( letter ) { letter | digit }
+identifier          = ( letter ) { letter | digit }
 ```
 
 #### Examples:
