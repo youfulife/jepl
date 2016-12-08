@@ -9,24 +9,63 @@ import (
 	"testing"
 )
 
-func TestSyntax(t *testing.T) {
+func TestTypeValid(t *testing.T) {
 	var tests = []struct {
 		s    string
 		stmt jepl.Statement
 		err  string
 	}{
-		// Errors
-		{s: `select max(tcp.in_pkts) from packetbeat where uid = 1`, err: ``},
-		{s: `select avg(tcp.in_pkts) from packetbeat  `, err: ``},
-		{s: `select sum(tcp.in_pkts) from packetbeat  uid = 1`, err: `found uid, expected EOF at line 1, char 42`},
+		{s: `select max(tcp.in_pkts) from packetbeat where uid > 5 * xxx`, err: ``},
+		{s: `select max(tcp.in_pkts) from packetbeat where uid = 'xxx'`, err: ``},
+		{s: `select max(tcp.in_pkts) from packetbeat where uid != 'xxx'`, err: ``},
+		{s: `select max(tcp.in_pkts) from packetbeat where uid != "xxx"`, err: ``},
+		{s: `select max(tcp.in_pkts) from packetbeat where uid = "xxx"`, err: ``},
 	}
 	for i, test := range tests {
 		stmt, err := jepl.ParseStatement(test.s)
 		if !reflect.DeepEqual(test.err, errstring(err)) {
 			t.Errorf("%d. %q: error mismatch:\n  exp=%s\n  got=%s\n\n", i, test.s, test.err, err)
 		}
-		json.MarshalIndent(stmt, "", "  ")
-		// fmt.Println(string(js))
+		js, _ := json.MarshalIndent(stmt, "", "  ")
+		fmt.Println(string(js))
+	}
+}
+
+func TestTypeInvalid(t *testing.T) {
+	var tests = []struct {
+		s    string
+		stmt jepl.Statement
+		err  string
+	}{
+		{s: `select max(tcp.in_pkts) from packetbeat where uid > 'xxx'`, err: `invalid filter, unsupport op > for string`},
+		{s: `select max(tcp.in_pkts) from packetbeat where uid < "xxx"`, err: `invalid filter, unsupport op < for string`},
+		{s: `select max(tcp.in_pkts) from packetbeat where uid >= 'xxx'`, err: `invalid filter, unsupport op >= for string`},
+		{s: `select max(tcp.in_pkts) from packetbeat where uid <= 'xxx'`, err: `invalid filter, unsupport op <= for string`},
+		{s: `select max(tcp.in_pkts) from packetbeat where uid <= "xxx"`, err: `invalid filter, unsupport op <= for string`},
+	}
+	for i, test := range tests {
+		_, err := jepl.ParseStatement(test.s)
+		if !reflect.DeepEqual(test.err, errstring(err)) {
+			t.Errorf("%d. %q: error mismatch:\n  exp=%s\n  got=%s\n\n", i, test.s, test.err, err)
+		}
+	}
+}
+
+func TestSyntax(t *testing.T) {
+	var tests = []struct {
+		s    string
+		stmt jepl.Statement
+		err  string
+	}{
+		{s: `select max(tcp.in_pkts) from packetbeat where uid = 1`, err: ``},
+		{s: `select avg(tcp.in_pkts) from packetbeat  `, err: ``},
+		{s: `select sum(tcp.in_pkts) from packetbeat  uid = 1`, err: `found uid, expected EOF at line 1, char 42`},
+	}
+	for i, test := range tests {
+		_, err := jepl.ParseStatement(test.s)
+		if !reflect.DeepEqual(test.err, errstring(err)) {
+			t.Errorf("%d. %q: error mismatch:\n  exp=%s\n  got=%s\n\n", i, test.s, test.err, err)
+		}
 	}
 }
 

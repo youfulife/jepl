@@ -343,6 +343,53 @@ func (s *SelectStatement) validate() error {
 		return err
 	}
 
+	if err := s.validateConditions(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *SelectStatement) validateConditions() error {
+	expr := s.Condition
+	if expr == nil {
+		return nil
+	}
+	return validateCondition(expr, ILLEGAL)
+}
+
+// valid condition expr.
+func validateCondition(expr Expr, op Token) error {
+	if expr == nil {
+		return nil
+	}
+
+	switch expr := expr.(type) {
+	case *Call:
+		return fmt.Errorf("invalid filter, unsupport function %s", expr.String())
+	case *BinaryExpr:
+		err := validateCondition(expr.LHS, expr.Op)
+		if err != nil {
+			return err
+		}
+		return validateCondition(expr.RHS, expr.Op)
+	case *ParenExpr:
+		return validateCondition(expr.Expr, ILLEGAL)
+	case *RegexLiteral:
+		switch op {
+		case EQREGEX, NEQREGEX:
+			return nil
+		default:
+			return fmt.Errorf("invalid filter, unsupport op %s for regex", op.String())
+		}
+	case *StringLiteral:
+		switch op {
+		case LT, LTE, GT, GTE:
+			return fmt.Errorf("invalid filter, unsupport op %s for string", op.String())
+		default:
+			return nil
+		}
+	}
 	return nil
 }
 
@@ -533,7 +580,7 @@ func evalFC(expr Expr, m map[string]interface{}) {
 	switch expr := expr.(type) {
 	case *Call:
 		expr.Count += 1
-		
+
 		switch expr.Name {
 		case "sum", "avg":
 			switch res := Eval(expr.Args[0], m).(type) {
@@ -575,7 +622,6 @@ func evalFC(expr Expr, m map[string]interface{}) {
 					expr.result = thisret
 				}
 			}
-
 
 		}
 	case *BinaryExpr:

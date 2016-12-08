@@ -47,16 +47,12 @@ Identifiers are tokens which refer to topic names, field keys.
 
 The rules:
 
-- double quoted identifiers can contain any unicode character other than a new line
-- double quoted identifiers can contain escaped `"` characters (i.e., `\"`)
-- double quoted identifiers can contain keywords
-- unquoted identifiers must start with an upper or lowercase ASCII character or "_"
-- unquoted identifiers may contain only ASCII letters, decimal digits, and "_"
+- must start with an upper or lowercase ASCII character or "_"
+- may contain only ASCII letters, decimal digits, and "_"
 
 ```
-identifier          = unquoted_identifier | quoted_identifier
+identifier          = unquoted_identifier
 unquoted_identifier = ( letter ) { letter | digit }
-quoted_identifier   = `"` unicode_char { unicode_char } `"`
 ```
 
 #### Examples:
@@ -64,9 +60,6 @@ quoted_identifier   = `"` unicode_char { unicode_char } `"`
 ```
 cpu
 _cpu_stats
-"1h"
-"anything really"
-"1_Crazy-1337.identifier>NAME"
 ```
 
 ## Keywords
@@ -97,11 +90,11 @@ float_lit           = int_lit "." int_lit
 
 ### Strings
 
-String literals must be surrounded by single quotes. Strings may contain `'`
-characters as long as they are escaped (i.e., `\'`).
+String literals must be surrounded by single quotes or double quotes. Strings may contain `'` or `"`
+characters as long as they are escaped (i.e., `\'`, `\"`).
 
 ```
-string_lit          = `'` { unicode_char } `'`
+string_lit          = (`'` { unicode_char } `'`) | (`"` { unicode_char } `"`)
 ```
 
 ### Booleans

@@ -73,17 +73,18 @@ func TestScanner_Scan(t *testing.T) {
 		{s: `foo`, tok: jepl.IDENT, lit: `foo`},
 		{s: `_foo`, tok: jepl.IDENT, lit: `_foo`},
 		{s: `Zx12_3U_-`, tok: jepl.IDENT, lit: `Zx12_3U_`},
-		{s: `"foo"`, tok: jepl.IDENT, lit: `foo`},
-		{s: `"foo\\bar"`, tok: jepl.IDENT, lit: `foo\bar`},
-		{s: `"foo\bar"`, tok: jepl.BADESCAPE, lit: `\b`, pos: jepl.Pos{Line: 0, Char: 5}},
-		{s: `"foo\"bar\""`, tok: jepl.IDENT, lit: `foo"bar"`},
-		{s: `test"`, tok: jepl.BADSTRING, lit: "", pos: jepl.Pos{Line: 0, Char: 3}},
-		{s: `"test`, tok: jepl.BADSTRING, lit: `test`},
 
 		{s: `true`, tok: jepl.TRUE},
 		{s: `false`, tok: jepl.FALSE},
 
 		// Strings
+		{s: `"foo"`, tok: jepl.STRING, lit: `foo`},
+		{s: `"foo\\bar"`, tok: jepl.STRING, lit: `foo\bar`},
+		{s: `"foo\bar"`, tok: jepl.BADESCAPE, lit: `\b`, pos: jepl.Pos{Line: 0, Char: 5}},
+		{s: `"foo\"bar\""`, tok: jepl.STRING, lit: `foo"bar"`},
+		{s: `test"`, tok: jepl.BADSTRING, lit: "", pos: jepl.Pos{Line: 0, Char: 3}},
+		{s: `"test`, tok: jepl.BADSTRING, lit: `test`},
+
 		{s: `'testing 123!'`, tok: jepl.STRING, lit: `testing 123!`},
 		{s: `'foo\nbar'`, tok: jepl.STRING, lit: "foo\nbar"},
 		{s: `'foo\\bar'`, tok: jepl.STRING, lit: "foo\\bar"},
