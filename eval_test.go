@@ -26,8 +26,8 @@ func TestTypeValid(t *testing.T) {
 		if !reflect.DeepEqual(test.err, errstring(err)) {
 			t.Errorf("%d. %q: error mismatch:\n  exp=%s\n  got=%s\n\n", i, test.s, test.err, err)
 		}
-		js, _ := json.MarshalIndent(stmt, "", "  ")
-		fmt.Println(string(js))
+		json.MarshalIndent(stmt, "", "  ")
+		// fmt.Println(string(js))
 	}
 }
 
@@ -42,6 +42,8 @@ func TestTypeInvalid(t *testing.T) {
 		{s: `select max(tcp.in_pkts) from packetbeat where uid >= 'xxx'`, err: `invalid filter, unsupport op >= for string`},
 		{s: `select max(tcp.in_pkts) from packetbeat where uid <= 'xxx'`, err: `invalid filter, unsupport op <= for string`},
 		{s: `select max(tcp.in_pkts) from packetbeat where uid <= "xxx"`, err: `invalid filter, unsupport op <= for string`},
+		{s: `select max(tcp.in_pkts) from packetbeat where uid = "xxx" AND xx > "yyy"`, err: `invalid filter, unsupport op > for string`},
+		{s: `select max(tcp.in_pkts) from packetbeat where uid = 5 * "xxx" + "xxx"`, err: `invalid filter, unsupport op * for string`},
 	}
 	for i, test := range tests {
 		_, err := jepl.ParseStatement(test.s)

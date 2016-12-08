@@ -384,7 +384,7 @@ func validateCondition(expr Expr, op Token) error {
 		}
 	case *StringLiteral:
 		switch op {
-		case LT, LTE, GT, GTE:
+		case LT, LTE, GT, GTE, SUB, MUL, DIV, ADD:
 			return fmt.Errorf("invalid filter, unsupport op %s for string", op.String())
 		default:
 			return nil
