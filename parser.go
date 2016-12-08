@@ -96,6 +96,10 @@ func (p *Parser) parseSelectStatement() (*SelectStatement, error) {
 		return nil, err
 	}
 
+	if tok, pos, lit := p.scanIgnoreWhitespace(); tok != EOF {
+		return nil, newParseError(tokstr(tok, lit), []string{"EOF"}, pos)
+	}
+
 	// Set if the query is a raw data query or one with an aggregate
 	stmt.IsRawQuery = true
 	WalkFunc(stmt.Fields, func(n Node) {
