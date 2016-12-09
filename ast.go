@@ -389,8 +389,9 @@ func validateCondition(expr Expr, op Token) error {
 		default:
 			return nil
 		}
+	default:
+		return nil
 	}
-	return nil
 }
 
 func (s *SelectStatement) validateFields() error {
