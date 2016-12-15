@@ -278,18 +278,6 @@ func TestQuoteIdent(t *testing.T) {
 	}
 }
 
-func BenchmarkParserParseStatement(b *testing.B) {
-	b.ReportAllocs()
-	s := `SELECT "field" FROM "series" WHERE value > 10`
-	for i := 0; i < b.N; i++ {
-		if stmt, err := jepl.NewParser(strings.NewReader(s)).ParseStatement(); err != nil {
-			b.Fatalf("unexpected error: %s", err)
-		} else if stmt == nil {
-			b.Fatalf("expected statement: %s", stmt)
-		}
-	}
-	b.SetBytes(int64(len(s)))
-}
 
 // MustParseSelectStatement parses a select statement. Panic on error.
 func MustParseSelectStatement(s string) *jepl.SelectStatement {
@@ -329,4 +317,33 @@ func mustMarshalJSON(v interface{}) []byte {
 
 func intptr(v int) *int {
 	return &v
+}
+
+func BenchmarkParseStatement1(b *testing.B) {
+	b.ReportAllocs()
+	s := `SELECT count(field) FROM series WHERE value > 10`
+	for i := 0; i < b.N; i++ {
+
+		if stmt, err := jepl.NewParser(strings.NewReader(s)).ParseStatement(); err != nil {
+			b.Fatalf("unexpected error: %s", err)
+		} else if stmt == nil {
+			b.Fatalf("expected statement: %s", stmt)
+		} else {
+			_ = stmt.String()
+		}
+	}
+//	b.SetBytes(int64(len(s)))
+}
+
+func BenchmarkParseStatement2(b *testing.B) {
+	b.ReportAllocs()
+	s := "select max(tcp.in_pkts) from packetbeat where guid = 'for a test you know'"
+	for i := 0; i < b.N; i++ {
+		if stmt, err := jepl.NewParser(strings.NewReader(s)).ParseStatement(); err != nil {
+			b.Fatalf("unexpected error: %s", err)
+		} else if stmt == nil {
+			b.Fatalf("expected statement: %s", stmt)
+		}
+	}
+	b.SetBytes(int64(len(s)))
 }

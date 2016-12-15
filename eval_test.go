@@ -3,7 +3,6 @@ package jepl_test
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bitly/go-simplejson"
 	"github.com/chenyoufu/jepl"
 	"reflect"
 	"testing"
@@ -83,14 +82,14 @@ func TestEvalQuery(t *testing.T) {
 	// fcs := stmt.(*jepl.SelectStatement).FunctionCalls()
 
 	for i := 0; i < 10; i++ {
-		js, _ := simplejson.NewJson([]byte(fmt.Sprintf(`{
-            "uid": 1,
-            "tcp": {"in_bytes":%d, "out_bytes": 20, "in_pkts": %d, "out_pkts": 2}
-        }`, i*10, i)))
-		switch res := jepl.Eval(cond, js.MustMap()).(type) {
+		js := (fmt.Sprintf(`{
+			"uid": 1,
+			"tcp": {"in_bytes":%d, "out_bytes": 20, "in_pkts": %d, "out_pkts": 2}
+		}`, i*10, i))
+		switch res := jepl.Eval(cond, &js).(type) {
 		case bool:
 			if res == true {
-				stmt.(*jepl.SelectStatement).EvalFunctionCalls(js.MustMap())
+				stmt.(*jepl.SelectStatement).EvalFunctionCalls(&js)
 			}
 		default:
 			fmt.Println("Select Where Condition parse error")
@@ -98,4 +97,116 @@ func TestEvalQuery(t *testing.T) {
 	}
 	ms := stmt.(*jepl.SelectStatement).EvalMetric()
 	fmt.Println(ms)
+}
+
+func BenchmarkEvalFunctionCalls(b *testing.B) {
+	b.ReportAllocs()
+
+	s := "select sum(_source.http.in_bytes+_source.http.out_bytes) AS total_bytes FROM packetbeat where _source.guid='4a859fff6e5c4521aab187eee1cfceb8'"
+
+	stmt, err := jepl.ParseStatement(s)
+	if err != nil {
+		panic(err)
+	}
+
+	cond := stmt.(*jepl.SelectStatement).Condition
+	// fields := stmt.(*jepl.SelectStatement).Fields
+	// fcs := stmt.(*jepl.SelectStatement).FunctionCalls()
+
+	for i := 0; i < b.N; i++ {
+		js := `{
+			"_index": "cc-cloudsensor-4a859fff6e5c4521aab187eee1cfceb8-2016.12.14",
+			"_type": "http",
+			"_id": "AVj-D8OzyUc7ekFJUXpB",
+			"_score": null,
+			"_timestamp": 1481731195827,
+			"_source": {
+				"@timestamp": "2016-12-14T23:59:55+08:00",
+				"aggregate_count": 1,
+				"appname": "cloudsensor",
+				"dawn_ts0": 1481731195311000,
+				"dawn_ts1": 1481731195311000,
+				"device_id": "be8bb0ff-c73a-5ca6-afd8-871783d8b890",
+				"fair_handle_latency_us": 105,
+				"fair_ts0": 1481731195391680,
+				"fair_ts1": 1481731195391785,
+				"guid": "4a859fff6e5c4521aab187eee1cfceb8",
+				"host": "list.com",
+				"http": {
+					"dst_ip": {
+						"decimal": 2362426130,
+						"dotted": "140.207.195.18",
+						"isp": "联通",
+						"latitude": "121.472644",
+						"longtitude": "31.231706",
+						"raw": 2362426130,
+						"region": "上海"
+					},
+					"dst_port": 80,
+					"host": "passport.bdimg.com",
+					"http_method": 1,
+					"https_flag": 0,
+					"in_bytes": 305,
+					"in_pkts": 1,
+					"l4_protocol": "tcp",
+					"latency_sec": 0,
+					"latency_usec": 215779,
+					"out_bytes": 675,
+					"out_pkts": 1,
+					"refer": "",
+					"src_ip": {
+						"decimal": 176189498,
+						"dotted": "10.128.112.58",
+						"isp": "",
+						"latitude": "",
+						"longtitude": "",
+						"raw": 176189498,
+						"region": ""
+					},
+					"src_port": 38558,
+					"status_code": 200,
+					"url": "/passApi/html/sdkloginconfig.html",
+					"url_query": "",
+					"user_agent": {
+						"raw": ""
+					},
+					"xff": ""
+				},
+				"kafka": {
+					"offset": 83107248,
+					"partition": 0,
+					"topic": "cloudsensor"
+				},
+				"probe": {
+					"hostname": "list.com",
+					"name": "cloudsensor"
+				},
+				"probe_ts": 1481731310,
+				"topic": "cloudsensor",
+				"type": "http"
+			},
+			"fields": {
+				"@timestamp": [
+				1481731195000
+				]
+			},
+			"highlight": {
+				"type": [
+				"@kibana-highlighted-field@http@/kibana-highlighted-field@"
+				]
+			},
+			"sort": [
+			1481731195000
+			]
+		}`
+		switch res := jepl.Eval(cond, &js).(type) {
+		case bool:
+			if res == true {
+				stmt.(*jepl.SelectStatement).EvalFunctionCalls(&js)
+			}
+		default:
+			fmt.Println("Select Where Condition parse error")
+		}
+	}
+	fmt.Println(stmt.(*jepl.SelectStatement).EvalMetric())
 }

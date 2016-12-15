@@ -2,10 +2,9 @@ package jepl
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/bitly/go-simplejson"
+	"github.com/buger/jsonparser"
 	"reflect"
 	"regexp"
 	"regexp/syntax"
@@ -571,20 +570,20 @@ func (s *SelectStatement) FunctionCalls() []*Call {
 }
 
 // FunctionCalls returns the Call objects from the query
-func (s *SelectStatement) EvalFunctionCalls(m map[string]interface{}) {
+func (s *SelectStatement) EvalFunctionCalls(js *string) {
 	for _, f := range s.Fields {
-		evalFC(f.Expr, m)
+		evalFC(f.Expr, js)
 	}
 }
 
-func evalFC(expr Expr, m map[string]interface{}) {
+func evalFC(expr Expr, js *string) {
 	switch expr := expr.(type) {
 	case *Call:
 		expr.Count += 1
 
 		switch expr.Name {
 		case "sum", "avg":
-			switch res := Eval(expr.Args[0], m).(type) {
+			switch res := Eval(expr.Args[0], js).(type) {
 			case int64:
 				expr.result += float64(res)
 			case float64:
@@ -592,7 +591,7 @@ func evalFC(expr Expr, m map[string]interface{}) {
 			}
 		case "max":
 			var thisret float64
-			switch res := Eval(expr.Args[0], m).(type) {
+			switch res := Eval(expr.Args[0], js).(type) {
 			case int64:
 				thisret = float64(res)
 			case float64:
@@ -609,7 +608,7 @@ func evalFC(expr Expr, m map[string]interface{}) {
 
 		case "min":
 			var thisret float64
-			switch res := Eval(expr.Args[0], m).(type) {
+			switch res := Eval(expr.Args[0], js).(type) {
 			case int64:
 				thisret = float64(res)
 			case float64:
@@ -626,8 +625,8 @@ func evalFC(expr Expr, m map[string]interface{}) {
 
 		}
 	case *BinaryExpr:
-		evalFC(expr.LHS, m)
-		evalFC(expr.RHS, m)
+		evalFC(expr.LHS, js)
+		evalFC(expr.RHS, js)
 	}
 }
 
@@ -1219,7 +1218,7 @@ type Rewriter interface {
 }
 
 // Eval evaluates expr against a map.
-func Eval(expr Expr, m map[string]interface{}) interface{} {
+func Eval(expr Expr, js *string) interface{} {
 	if expr == nil {
 		return nil
 	}
@@ -1245,7 +1244,7 @@ func Eval(expr Expr, m map[string]interface{}) interface{} {
 
 		return ret
 	case *BinaryExpr:
-		return evalBinaryExpr(expr, m)
+		return evalBinaryExpr(expr, js)
 	case *BooleanLiteral:
 		return expr.Val
 	case *ListLiteral:
@@ -1255,37 +1254,42 @@ func Eval(expr Expr, m map[string]interface{}) interface{} {
 	case *NumberLiteral:
 		return expr.Val
 	case *ParenExpr:
-		return Eval(expr.Expr, m)
+		return Eval(expr.Expr, js)
 	case *RegexLiteral:
 		return expr.Val
 	case *StringLiteral:
 		return expr.Val
 	case *VarRef:
-		ms, _ := json.Marshal(m)
-		js, _ := simplejson.NewJson(ms)
-		switch v := js.GetPath(expr.Segments...).Interface().(type) {
-		case json.Number:
-			if n, err := v.Int64(); err != nil {
-				if f, err := v.Float64(); err != nil {
-					fmt.Println("json Number eval Error")
-				} else {
-					return f
-				}
-			} else {
-				return n
+		if val, dt, _, err := jsonparser.Get([]byte(*js), expr.Segments...); err == nil {
+			switch dt {
+			case jsonparser.Number:
+				val_float , _ := jsonparser.ParseFloat(val)
+				return val_float
+
+			case jsonparser.String:
+				val_str , _ := jsonparser.ParseString(val)
+				return val_str
+
+			case jsonparser.Boolean:
+				val_bool , _ := jsonparser.ParseBoolean(val)
+				return val_bool
+
+			default:
+				return nil
 			}
-		default:
-			return v
+		} else {
+			fmt.Println(err, expr.Segments)
+			return nil
 		}
 	default:
 		return nil
 	}
-	return nil
+
 }
 
-func evalBinaryExpr(expr *BinaryExpr, m map[string]interface{}) interface{} {
-	lhs := Eval(expr.LHS, m)
-	rhs := Eval(expr.RHS, m)
+func evalBinaryExpr(expr *BinaryExpr, js *string) interface{} {
+	lhs := Eval(expr.LHS, js)
+	rhs := Eval(expr.RHS, js)
 
 	// Evaluate if both sides are simple types.
 	switch lhs := lhs.(type) {
@@ -1467,8 +1471,8 @@ func in_array(val interface{}, array interface{}) (exists bool) {
 
 // EvalBool evaluates expr and returns true if result is a boolean true.
 // Otherwise returns false.
-func EvalBool(expr Expr, m map[string]interface{}) bool {
-	v, _ := Eval(expr, m).(bool)
+func EvalBool(expr Expr, js *string) bool {
+	v, _ := Eval(expr, js).(bool)
 	return v
 }
 
