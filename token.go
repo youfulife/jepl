@@ -63,6 +63,8 @@ const (
 	FROM
 	SELECT
 	WHERE
+	GROUP
+	BY
 	keywordEnd
 )
 
@@ -112,6 +114,8 @@ var tokens = [...]string{
 	FROM:   "FROM",
 	SELECT: "SELECT",
 	WHERE:  "WHERE",
+	GROUP:  "GROUP",
+	BY:     "BY",
 }
 
 var keywords map[string]Token

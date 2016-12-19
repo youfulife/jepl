@@ -82,10 +82,10 @@ func TestEvalQuery(t *testing.T) {
 	// fcs := stmt.(*jepl.SelectStatement).FunctionCalls()
 
 	for i := 0; i < 10; i++ {
-		js := (fmt.Sprintf(`{
+		js := fmt.Sprintf(`{
 			"uid": 1,
 			"tcp": {"in_bytes":%d, "out_bytes": 20, "in_pkts": %d, "out_pkts": 2}
-		}`, i*10, i))
+		}`, i*10, i)
 		switch res := jepl.Eval(cond, &js).(type) {
 		case bool:
 			if res == true {

@@ -112,6 +112,8 @@ func TestScanner_Scan(t *testing.T) {
 		{s: `FROM`, tok: jepl.FROM},
 		{s: `SELECT`, tok: jepl.SELECT},
 		{s: `WHERE`, tok: jepl.WHERE},
+		{s: `GROUP`, tok: jepl.GROUP},
+		{s: `BY`, tok: jepl.BY},
 	}
 
 	for i, tt := range tests {
