@@ -215,6 +215,9 @@ type SelectStatement struct {
 	// An expression evaluated on data point.
 	Condition Expr
 
+	// Expressions used for grouping the selection.
+	Dimensions Dimensions
+
 	// if it's a query for raw data values (i.e. not an aggregate)
 	IsRawQuery bool
 
@@ -222,6 +225,26 @@ type SelectStatement struct {
 	Dedupe bool
 
 	Count int
+}
+
+// Dimension represents an expression that a select statement is grouped by.
+type Dimension struct {
+	Expr Expr
+}
+
+// String returns a string representation of the dimension.
+func (d *Dimension) String() string { return d.Expr.String() }
+
+// Dimensions represents a list of dimensions.
+type Dimensions []*Dimension
+
+// String returns a string representation of the dimensions.
+func (a Dimensions) String() string {
+	var str []string
+	for _, d := range a {
+		str = append(str, d.String())
+	}
+	return strings.Join(str, ", ")
 }
 
 // matchExactRegex matches regexes that have the following form: /^foo$/. It
@@ -329,6 +352,10 @@ func (s *SelectStatement) String() string {
 	if s.Condition != nil {
 		_, _ = buf.WriteString(" WHERE ")
 		_, _ = buf.WriteString(s.Condition.String())
+	}
+	if len(s.Dimensions) > 0 {
+		_, _ = buf.WriteString(" GROUP BY ")
+		_, _ = buf.WriteString(s.Dimensions.String())
 	}
 	return buf.String()
 }
@@ -1263,15 +1290,15 @@ func Eval(expr Expr, js *string) interface{} {
 		if val, dt, _, err := jsonparser.Get([]byte(*js), expr.Segments...); err == nil {
 			switch dt {
 			case jsonparser.Number:
-				val_float , _ := jsonparser.ParseFloat(val)
+				val_float, _ := jsonparser.ParseFloat(val)
 				return val_float
 
 			case jsonparser.String:
-				val_str , _ := jsonparser.ParseString(val)
+				val_str, _ := jsonparser.ParseString(val)
 				return val_str
 
 			case jsonparser.Boolean:
-				val_bool , _ := jsonparser.ParseBoolean(val)
+				val_bool, _ := jsonparser.ParseBoolean(val)
 				return val_bool
 
 			default:

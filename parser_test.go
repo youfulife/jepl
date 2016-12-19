@@ -10,6 +10,32 @@ import (
 	"testing"
 )
 
+func TestParseGroupBy(t *testing.T) {
+	// For use in various tests.
+	var tests = []struct {
+		s   string
+		d   string
+		err string
+	}{
+		{s: `SELECT sum(x) FROM Packetbeat where uid="xxx" group by tcp.src_ip`, d: `"tcp.src_ip"`, err: ``},
+		{s: `SELECT sum(x) FROM Packetbeat group by tcp.src_ip, tcp.dst_ip`, d: `"tcp.src_ip", "tcp.dst_ip"`, err: ``},
+	}
+	for i, tt := range tests {
+		p := jepl.NewParser(strings.NewReader(tt.s))
+		stmt, err := p.ParseStatement()
+
+		if !reflect.DeepEqual(tt.err, errstring(err)) {
+			t.Errorf("%d. %q: error mismatch:\n  exp=%s\n  got=%s\n\n", i, tt.s, tt.err, err)
+		}
+
+		d := stmt.(*jepl.SelectStatement).Dimensions.String()
+
+		if d != tt.d {
+			t.Errorf("%d. %q: error mismatch:\n  exp=%s\n  got=%s\n\n", i, tt.s, tt.d, d)
+		}
+	}
+}
+
 // Ensure the parser can only parse select statement
 func TestParseStatement(t *testing.T) {
 	// For use in various tests.
@@ -61,7 +87,7 @@ func TestParseSelectStatement(t *testing.T) {
 		{s: `SELECT count(x), sum(x) from foo`, err: ``},
 		{s: `SELECT count(x), sum(x)+sum(y) from foo`, err: ``},
 		{s: `SELECT sum(x + y *6 /z) from foo`, err: ``},
-		{s: `SELECT sum(x) * (sum(y) / sum(z)) from foo`, err: ``},
+		{s: `SELECT sum(x) * (sum(y) / sum(z)) from foo group by host`, err: ``},
 	}
 	for i, tt := range tests {
 
@@ -214,7 +240,7 @@ func TestParser_ParseExpr(t *testing.T) {
 		{
 			s: `my_func(1, 2 + 3)`,
 			expr: &jepl.Call{
-				Name: "my_func",
+				Name:  "my_func",
 				First: true,
 				Args: []jepl.Expr{
 					&jepl.IntegerLiteral{Val: 1},
@@ -278,7 +304,6 @@ func TestQuoteIdent(t *testing.T) {
 	}
 }
 
-
 // MustParseSelectStatement parses a select statement. Panic on error.
 func MustParseSelectStatement(s string) *jepl.SelectStatement {
 	stmt, err := jepl.NewParser(strings.NewReader(s)).ParseStatement()
@@ -332,7 +357,7 @@ func BenchmarkParseStatement1(b *testing.B) {
 			_ = stmt.String()
 		}
 	}
-//	b.SetBytes(int64(len(s)))
+	//	b.SetBytes(int64(len(s)))
 }
 
 func BenchmarkParseStatement2(b *testing.B) {

@@ -96,6 +96,11 @@ func (p *Parser) parseSelectStatement() (*SelectStatement, error) {
 		return nil, err
 	}
 
+	// Parse dimensions: "GROUP BY DIMENSION+".
+	if stmt.Dimensions, err = p.parseDimensions(); err != nil {
+		return nil, err
+	}
+
 	if tok, pos, lit := p.scanIgnoreWhitespace(); tok != EOF {
 		return nil, newParseError(tokstr(tok, lit), []string{"EOF"}, pos)
 	}
@@ -259,6 +264,60 @@ func (p *Parser) parseCondition() (Expr, error) {
 	}
 
 	return expr, nil
+}
+
+// parseDimensions parses the "GROUP BY" clause of the query, if it exists.
+func (p *Parser) parseDimensions() (Dimensions, error) {
+	// If the next token is not GROUP then exit.
+	if tok, _, _ := p.scanIgnoreWhitespace(); tok != GROUP {
+		p.unscan()
+		return nil, nil
+	}
+
+	// Now the next token should be "BY".
+	if tok, pos, lit := p.scanIgnoreWhitespace(); tok != BY {
+		return nil, newParseError(tokstr(tok, lit), []string{"BY"}, pos)
+	}
+
+	var dimensions Dimensions
+	for {
+		// Parse the dimension.
+		d, err := p.parseDimension()
+		if err != nil {
+			return nil, err
+		}
+
+		// Add new dimension.
+		dimensions = append(dimensions, d)
+
+		// If there's not a comma next then stop parsing dimensions.
+		if tok, _, _ := p.scan(); tok != COMMA {
+			p.unscan()
+			break
+		}
+	}
+	return dimensions, nil
+}
+
+// parseDimension parses a single dimension.
+func (p *Parser) parseDimension() (*Dimension, error) {
+	re, err := p.parseRegex()
+	if err != nil {
+		return nil, err
+	} else if re != nil {
+		return &Dimension{Expr: re}, nil
+	}
+
+	// Parse the expression first.
+	expr, err := p.ParseExpr()
+	if err != nil {
+		return nil, err
+	}
+
+	// Consume all trailing whitespace.
+	p.consumeWhitespace()
+
+	return &Dimension{Expr: expr}, nil
 }
 
 // parseVarRef parses a reference to a measurement or field.
