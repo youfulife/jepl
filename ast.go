@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/buger/jsonparser"
-	"reflect"
 	"regexp"
 	"regexp/syntax"
 	"strconv"
@@ -104,7 +102,6 @@ func (*ListLiteral) node()    {}
 func (Sources) node()         {}
 func (*StringLiteral) node()  {}
 func (*VarRef) node()         {}
-func (*Wildcard) node()       {}
 
 // Statements represents a list of statements.
 type Statements []Statement
@@ -150,7 +147,6 @@ func (*RegexLiteral) expr()   {}
 func (*ListLiteral) expr()    {}
 func (*StringLiteral) expr()  {}
 func (*VarRef) expr()         {}
-func (*Wildcard) expr()       {}
 
 // Literal represents a static literal.
 type Literal interface {
@@ -596,80 +592,6 @@ func (s *SelectStatement) FunctionCalls() []*Call {
 	return a
 }
 
-// FunctionCalls returns the Call objects from the query
-func (s *SelectStatement) EvalFunctionCalls(js *string) {
-	for _, f := range s.Fields {
-		evalFC(f.Expr, js)
-	}
-}
-
-func evalFC(expr Expr, js *string) {
-	switch expr := expr.(type) {
-	case *Call:
-		expr.Count++
-
-		switch expr.Name {
-		case "sum", "avg":
-			switch res := Eval(expr.Args[0], js).(type) {
-			case int64:
-				expr.result += float64(res)
-			case float64:
-				expr.result += res
-			}
-		case "max":
-			var thisret float64
-			switch res := Eval(expr.Args[0], js).(type) {
-			case int64:
-				thisret = float64(res)
-			case float64:
-				thisret = res
-			}
-			if expr.First {
-				expr.result = thisret
-				expr.First = false
-			} else {
-				if thisret > expr.result {
-					expr.result = thisret
-				}
-			}
-
-		case "min":
-			var thisret float64
-			switch res := Eval(expr.Args[0], js).(type) {
-			case int64:
-				thisret = float64(res)
-			case float64:
-				thisret = res
-			}
-			if expr.First {
-				expr.result = thisret
-				expr.First = false
-			} else {
-				if thisret < expr.result {
-					expr.result = thisret
-				}
-			}
-
-		}
-	case *BinaryExpr:
-		evalFC(expr.LHS, js)
-		evalFC(expr.RHS, js)
-	}
-}
-
-type Point struct {
-	Metric float64
-	TS     int64
-}
-
-func (s *SelectStatement) EvalMetric() []Point {
-	points := []Point{}
-	for _, f := range s.Fields {
-		points = append(points, Point{Eval(f.Expr, nil).(float64), time.Now().Unix()})
-	}
-	return points
-}
-
 // FunctionCallsByPosition returns the Call objects from the query in the order they appear in the select statement
 func (s *SelectStatement) FunctionCallsByPosition() [][]*Call {
 	var a [][]*Call
@@ -824,11 +746,6 @@ func (f *Field) String() string {
 	return fmt.Sprintf("%s AS %s", str, QuoteIdent(f.Alias))
 }
 
-// Sort Interface for Fields
-func (a Fields) Len() int           { return len(a) }
-func (a Fields) Less(i, j int) bool { return a[i].Name() < a[j].Name() }
-func (a Fields) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-
 // VarRef represents a reference to a variable.
 type VarRef struct {
 	Val      string
@@ -837,16 +754,12 @@ type VarRef struct {
 
 // String returns a string representation of the variable reference.
 func (r *VarRef) String() string {
-	buf := bytes.NewBufferString(QuoteIdent(r.Val))
+	buf := bytes.NewBufferString(r.Val)
 	return buf.String()
 }
 
 // VarRefs represents a slice of VarRef types.
 type VarRefs []VarRef
-
-func (a VarRefs) Len() int { return len(a) }
-
-func (a VarRefs) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
 // Strings returns a slice of the variable names.
 func (a VarRefs) Strings() []string {
@@ -1115,52 +1028,6 @@ func (r *RegexLiteral) String() string {
 	return ""
 }
 
-// Wildcard represents a wild card expression.
-type Wildcard struct {
-	Type Token
-}
-
-// HasTimeExpr returns true if the expression has a time term.
-func HasTimeExpr(expr Expr) bool {
-	switch n := expr.(type) {
-	case *BinaryExpr:
-		if n.Op == AND || n.Op == OR {
-			return HasTimeExpr(n.LHS) || HasTimeExpr(n.RHS)
-		}
-		if ref, ok := n.LHS.(*VarRef); ok && strings.ToLower(ref.Val) == "time" {
-			return true
-		}
-		return false
-	case *ParenExpr:
-		// walk down the tree
-		return HasTimeExpr(n.Expr)
-	default:
-		return false
-	}
-}
-
-// OnlyTimeExpr returns true if the expression only has time constraints.
-func OnlyTimeExpr(expr Expr) bool {
-	if expr == nil {
-		return false
-	}
-	switch n := expr.(type) {
-	case *BinaryExpr:
-		if n.Op == AND || n.Op == OR {
-			return OnlyTimeExpr(n.LHS) && OnlyTimeExpr(n.RHS)
-		}
-		if ref, ok := n.LHS.(*VarRef); ok && strings.ToLower(ref.Val) == "time" {
-			return true
-		}
-		return false
-	case *ParenExpr:
-		// walk down the tree
-		return OnlyTimeExpr(n.Expr)
-	default:
-		return false
-	}
-}
-
 // Visitor can be called by Walk to traverse an AST hierarchy.
 // The Visit() function is called once per node.
 type Visitor interface {
@@ -1229,265 +1096,6 @@ func (fn walkFuncVisitor) Visit(n Node) Visitor { fn(n); return fn }
 // The Rewrite() function is called once per node.
 type Rewriter interface {
 	Rewrite(Node) Node
-}
-
-// Eval evaluates expr against a map.
-func Eval(expr Expr, js *string) interface{} {
-	if expr == nil {
-		return nil
-	}
-
-	switch expr := expr.(type) {
-	case *Call:
-		var ret interface{}
-
-		if expr.Name == "count" {
-			ret = float64(expr.Count)
-		} else {
-			ret = expr.result
-			if expr.Name == "avg" {
-				if expr.Count > 0 {
-					ret = expr.result / float64(expr.Count)
-				}
-			}
-		}
-
-		expr.result = 0.0
-		expr.First = true
-		expr.Count = 0
-
-		return ret
-	case *BinaryExpr:
-		return evalBinaryExpr(expr, js)
-	case *BooleanLiteral:
-		return expr.Val
-	case *ListLiteral:
-		return expr.Vals
-	case *IntegerLiteral:
-		return expr.Val
-	case *NumberLiteral:
-		return expr.Val
-	case *ParenExpr:
-		return Eval(expr.Expr, js)
-	case *RegexLiteral:
-		return expr.Val
-	case *StringLiteral:
-		return expr.Val
-	case *VarRef:
-		if val, dt, _, err := jsonparser.Get([]byte(*js), expr.Segments...); err == nil {
-			switch dt {
-			case jsonparser.Number:
-				v, _ := jsonparser.ParseFloat(val)
-				return v
-
-			case jsonparser.String:
-				v, _ := jsonparser.ParseString(val)
-				return v
-
-			case jsonparser.Boolean:
-				v, _ := jsonparser.ParseBoolean(val)
-				return v
-
-			default:
-				return nil
-			}
-		} else {
-			fmt.Println(err, expr.Segments)
-			return nil
-		}
-	default:
-		return nil
-	}
-
-}
-
-func evalBinaryExpr(expr *BinaryExpr, js *string) interface{} {
-	lhs := Eval(expr.LHS, js)
-	rhs := Eval(expr.RHS, js)
-
-	// Evaluate if both sides are simple types.
-	switch lhs := lhs.(type) {
-	case bool:
-		rhs, ok := rhs.(bool)
-		switch expr.Op {
-		case AND:
-			return ok && (lhs && rhs)
-		case OR:
-			return ok && (lhs || rhs)
-		case EQ:
-			return ok && (lhs == rhs)
-		case NEQ:
-			return ok && (lhs != rhs)
-		}
-	case float64:
-		// Try the rhs as a float64 or int64
-		rhsf, ok := rhs.(float64)
-		if !ok {
-			var rhsi int64
-			if rhsi, ok = rhs.(int64); ok {
-				rhsf = float64(rhsi)
-			}
-		}
-
-		switch expr.Op {
-		case IN:
-			return in_array(lhs, rhs)
-		case NI:
-			return !in_array(lhs, rhs)
-		case EQ:
-			return ok && (lhs == rhsf)
-		case NEQ:
-			return ok && (lhs != rhsf)
-		case LT:
-			return ok && (lhs < rhsf)
-		case LTE:
-			return ok && (lhs <= rhsf)
-		case GT:
-			return ok && (lhs > rhsf)
-		case GTE:
-			return ok && (lhs >= rhsf)
-		case ADD:
-			if !ok {
-				return nil
-			}
-			return lhs + rhsf
-		case SUB:
-			if !ok {
-				return nil
-			}
-			return lhs - rhsf
-		case MUL:
-			if !ok {
-				return nil
-			}
-			return lhs * rhsf
-		case DIV:
-			if !ok {
-				return nil
-			} else if rhs == 0 {
-				return float64(0)
-			}
-			return lhs / rhsf
-		}
-	case int64:
-		// Try as a float64 to see if a float cast is required.
-		rhsf, ok := rhs.(float64)
-		if ok {
-			lhs := float64(lhs)
-			rhs := rhsf
-			switch expr.Op {
-			case EQ:
-				return lhs == rhs
-			case NEQ:
-				return lhs != rhs
-			case LT:
-				return lhs < rhs
-			case LTE:
-				return lhs <= rhs
-			case GT:
-				return lhs > rhs
-			case GTE:
-				return lhs >= rhs
-			case ADD:
-				return lhs + rhs
-			case SUB:
-				return lhs - rhs
-			case MUL:
-				return lhs * rhs
-			case DIV:
-				if rhs == 0 {
-					return float64(0)
-				}
-				return lhs / rhs
-			}
-		} else {
-			rhsi, ok := rhs.(int64)
-			switch expr.Op {
-			case IN:
-				return in_array(lhs, rhs)
-			case NI:
-				return !in_array(lhs, rhs)
-			case EQ:
-				return ok && (lhs == rhsi)
-			case NEQ:
-				return ok && (lhs != rhsi)
-			case LT:
-				return ok && (lhs < rhsi)
-			case LTE:
-				return ok && (lhs <= rhsi)
-			case GT:
-				return ok && (lhs > rhsi)
-			case GTE:
-				return ok && (lhs >= rhsi)
-			case ADD:
-				if !ok {
-					return nil
-				}
-				return lhs + rhsi
-			case SUB:
-				if !ok {
-					return nil
-				}
-				return lhs - rhsi
-			case MUL:
-				if !ok {
-					return nil
-				}
-				return lhs * rhsi
-			case DIV:
-				if !ok {
-					return nil
-				} else if rhs == 0 {
-					return float64(0)
-				}
-				return lhs / rhsi
-			}
-		}
-	case string:
-		switch expr.Op {
-		case IN:
-			return in_array(lhs, rhs)
-		case NI:
-			return !in_array(lhs, rhs)
-		case EQ:
-			rhs, ok := rhs.(string)
-			return ok && lhs == rhs
-		case NEQ:
-			rhs, ok := rhs.(string)
-			return ok && lhs != rhs
-		case EQREGEX:
-			rhs, ok := rhs.(*regexp.Regexp)
-			return ok && rhs.MatchString(lhs)
-		case NEQREGEX:
-			rhs, ok := rhs.(*regexp.Regexp)
-			return ok && !rhs.MatchString(lhs)
-		}
-	}
-	return nil
-}
-
-func in_array(val interface{}, array interface{}) (exists bool) {
-	exists = false
-
-	switch reflect.TypeOf(array).Kind() {
-	case reflect.Slice:
-		s := reflect.ValueOf(array)
-
-		for i := 0; i < s.Len(); i++ {
-			if reflect.DeepEqual(val, s.Index(i).Interface()) == true {
-				exists = true
-				return
-			}
-		}
-	}
-	return
-}
-
-// EvalBool evaluates expr and returns true if result is a boolean true.
-// Otherwise returns false.
-func EvalBool(expr Expr, js *string) bool {
-	v, _ := Eval(expr, js).(bool)
-	return v
 }
 
 // Valuer is the interface that wraps the Value() method.

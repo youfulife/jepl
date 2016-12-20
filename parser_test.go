@@ -17,8 +17,8 @@ func TestParseGroupBy(t *testing.T) {
 		d   string
 		err string
 	}{
-		{s: `SELECT sum(x) FROM Packetbeat where uid="xxx" group by tcp.src_ip`, d: `"tcp.src_ip"`, err: ``},
-		{s: `SELECT sum(x) FROM Packetbeat group by tcp.src_ip, tcp.dst_ip`, d: `"tcp.src_ip", "tcp.dst_ip"`, err: ``},
+		{s: `SELECT sum(x) FROM Packetbeat where uid="xxx" group by tcp.src_ip`, d: `tcp.src_ip`, err: ``},
+		{s: `SELECT sum(x) FROM Packetbeat group by tcp.src_ip, tcp.dst_ip`, d: `tcp.src_ip, tcp.dst_ip`, err: ``},
 	}
 	for i, tt := range tests {
 		p := jepl.NewParser(strings.NewReader(tt.s))

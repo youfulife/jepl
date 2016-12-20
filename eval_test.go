@@ -79,29 +79,25 @@ func TestEvalQuery(t *testing.T) {
 		docs = append(docs, js)
 	}
 
-	stmt, err := jepl.ParseStatement(s)
-	if err != nil {
-		panic(err)
+	for k, v := range jepl.EvalSQL(s, docs) {
+		fmt.Println(k, v)
 	}
-	// cond := stmt.(*jepl.SelectStatement).Condition
-	// dimensions := stmt.(*jepl.SelectStatement).Dimensions
-	// fields := stmt.(*jepl.SelectStatement).Fields
-	// fcs := stmt.(*jepl.SelectStatement).FunctionCalls()
+}
 
-	stmts := stmt.(*jepl.SelectStatement).FlatStatByGroup(docs)
-	for k, v := range stmts {
-		for _, doc := range docs {
-			switch res := jepl.Eval(v.Condition, &doc).(type) {
-			case bool:
-				if res == true {
-					stmt.(*jepl.SelectStatement).EvalFunctionCalls(&doc)
-				}
-			default:
-				fmt.Println("Select Where Condition parse error")
-			}
-		}
-		ms := stmt.(*jepl.SelectStatement).EvalMetric()
-		fmt.Println(k, ms)
+func TestEvalQuery1(t *testing.T) {
+	s := "select sum(tcp.in_bytes) from packetbeat where uid = 1"
+
+	var docs []string
+	for i := 0; i < 10; i++ {
+		js := fmt.Sprintf(`{"uid": %d, "tcp": {"src_ip":%d, "dst_ip":%d, "in_bytes":%d, "out_bytes": 20, "in_pkts": %d, "out_pkts": 2}}`, i%3, i%2, i%3, i*10, i)
+		docs = append(docs, js)
+	}
+
+	pm := jepl.EvalSQL(s, docs)
+	got := pm["uid = 1"][0].Metric
+	expect := float64(120)
+	if got != expect {
+		t.Errorf("exp=%d\n  got=%d\n\n", expect, got)
 	}
 }
 
@@ -110,17 +106,8 @@ func BenchmarkEvalFunctionCalls(b *testing.B) {
 
 	s := "select sum(_source.http.in_bytes+_source.http.out_bytes) AS total_bytes FROM packetbeat where _source.guid='4a859fff6e5c4521aab187eee1cfceb8'"
 
-	stmt, err := jepl.ParseStatement(s)
-	if err != nil {
-		panic(err)
-	}
-
-	cond := stmt.(*jepl.SelectStatement).Condition
-	// fields := stmt.(*jepl.SelectStatement).Fields
-	// fcs := stmt.(*jepl.SelectStatement).FunctionCalls()
-
 	for i := 0; i < b.N; i++ {
-		js := `{
+		js := []string{`{
 			"_index": "cc-cloudsensor-4a859fff6e5c4521aab187eee1cfceb8-2016.12.14",
 			"_type": "http",
 			"_id": "AVj-D8OzyUc7ekFJUXpB",
@@ -204,15 +191,7 @@ func BenchmarkEvalFunctionCalls(b *testing.B) {
 			"sort": [
 			1481731195000
 			]
-		}`
-		switch res := jepl.Eval(cond, &js).(type) {
-		case bool:
-			if res == true {
-				stmt.(*jepl.SelectStatement).EvalFunctionCalls(&js)
-			}
-		default:
-			fmt.Println("Select Where Condition parse error")
-		}
+		}`}
+		jepl.EvalSQL(s, js)
 	}
-	fmt.Println(stmt.(*jepl.SelectStatement).EvalMetric())
 }
