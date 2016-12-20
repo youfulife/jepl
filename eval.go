@@ -122,7 +122,7 @@ func Eval(expr Expr, js *string) interface{} {
 				return nil
 			}
 		} else {
-			fmt.Println(err, expr.Segments)
+			// fmt.Println(err, expr.Segments)
 			return nil
 		}
 	default:
