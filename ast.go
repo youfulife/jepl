@@ -606,7 +606,7 @@ func (s *SelectStatement) EvalFunctionCalls(js *string) {
 func evalFC(expr Expr, js *string) {
 	switch expr := expr.(type) {
 	case *Call:
-		expr.Count += 1
+		expr.Count++
 
 		switch expr.Name {
 		case "sum", "avg":
@@ -859,11 +859,12 @@ func (a VarRefs) Strings() []string {
 
 // Call represents a function call.
 type Call struct {
-	Name   string
-	Args   []Expr  // must hava not funcCall expr
-	result float64 // must be float64
-	First  bool
-	Count  int
+	Name          string
+	Args          []Expr  // must hava not funcCall expr
+	result        float64 // must be float64
+	groupdResults map[string]float64
+	First         bool
+	Count         int
 }
 
 // String returns a string representation of the call.
@@ -1114,20 +1115,6 @@ func (r *RegexLiteral) String() string {
 	return ""
 }
 
-// CloneRegexLiteral returns a clone of the RegexLiteral.
-func CloneRegexLiteral(r *RegexLiteral) *RegexLiteral {
-	if r == nil {
-		return nil
-	}
-
-	clone := &RegexLiteral{}
-	if r.Val != nil {
-		clone.Val = regexp.MustCompile(r.Val.String())
-	}
-
-	return clone
-}
-
 // Wildcard represents a wild card expression.
 type Wildcard struct {
 	Type Token
@@ -1290,16 +1277,16 @@ func Eval(expr Expr, js *string) interface{} {
 		if val, dt, _, err := jsonparser.Get([]byte(*js), expr.Segments...); err == nil {
 			switch dt {
 			case jsonparser.Number:
-				val_float, _ := jsonparser.ParseFloat(val)
-				return val_float
+				v, _ := jsonparser.ParseFloat(val)
+				return v
 
 			case jsonparser.String:
-				val_str, _ := jsonparser.ParseString(val)
-				return val_str
+				v, _ := jsonparser.ParseString(val)
+				return v
 
 			case jsonparser.Boolean:
-				val_bool, _ := jsonparser.ParseBoolean(val)
-				return val_bool
+				v, _ := jsonparser.ParseBoolean(val)
+				return v
 
 			default:
 				return nil

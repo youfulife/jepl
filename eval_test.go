@@ -71,32 +71,38 @@ func TestSyntax(t *testing.T) {
 }
 
 func TestEvalQuery(t *testing.T) {
-	s := "select max(tcp.in_pkts), min(tcp.in_pkts), count(tcp.in_pkts), sum(tcp.in_pkts), avg(tcp.in_pkts) from packetbeat where uid = 1"
+	s := "select max(tcp.in_bytes), min(tcp.in_pkts), count(tcp.in_pkts), sum(tcp.in_pkts), avg(tcp.in_pkts) from packetbeat where uid = 1 group by tcp.src_ip, tcp.dst_ip"
+
+	var docs []string
+	for i := 0; i < 10; i++ {
+		js := fmt.Sprintf(`{"uid": %d, "tcp": {"src_ip":%d, "dst_ip":%d, "in_bytes":%d, "out_bytes": 20, "in_pkts": %d, "out_pkts": 2}}`, i%3, i%2, i%3, i*10, i)
+		docs = append(docs, js)
+	}
 
 	stmt, err := jepl.ParseStatement(s)
 	if err != nil {
 		panic(err)
 	}
-	cond := stmt.(*jepl.SelectStatement).Condition
+	// cond := stmt.(*jepl.SelectStatement).Condition
+	// dimensions := stmt.(*jepl.SelectStatement).Dimensions
 	// fields := stmt.(*jepl.SelectStatement).Fields
 	// fcs := stmt.(*jepl.SelectStatement).FunctionCalls()
 
-	for i := 0; i < 10; i++ {
-		js := fmt.Sprintf(`{
-			"uid": 1,
-			"tcp": {"in_bytes":%d, "out_bytes": 20, "in_pkts": %d, "out_pkts": 2}
-		}`, i*10, i)
-		switch res := jepl.Eval(cond, &js).(type) {
-		case bool:
-			if res == true {
-				stmt.(*jepl.SelectStatement).EvalFunctionCalls(&js)
+	stmts := stmt.(*jepl.SelectStatement).FlatStatByGroup(docs)
+	for k, v := range stmts {
+		for _, doc := range docs {
+			switch res := jepl.Eval(v.Condition, &doc).(type) {
+			case bool:
+				if res == true {
+					stmt.(*jepl.SelectStatement).EvalFunctionCalls(&doc)
+				}
+			default:
+				fmt.Println("Select Where Condition parse error")
 			}
-		default:
-			fmt.Println("Select Where Condition parse error")
 		}
+		ms := stmt.(*jepl.SelectStatement).EvalMetric()
+		fmt.Println(k, ms)
 	}
-	ms := stmt.(*jepl.SelectStatement).EvalMetric()
-	fmt.Println(ms)
 }
 
 func BenchmarkEvalFunctionCalls(b *testing.B) {
