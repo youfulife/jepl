@@ -120,7 +120,7 @@ statement        = select_stmt
 ### SELECT
 
 ```
-select_stmt      = "SELECT" fields [from_clause] [ where_clause ]
+select_stmt      = "SELECT" fields [from_clause] [ where_clause ] [ group_by_clause ]
 ```
 
 ### Fields
@@ -158,6 +158,8 @@ arg_factor       = int_lit | float_lit | var_ref | "(" arg_expr ")"
 from_clause      = "FROM" identifier
 
 where_clause     = "WHERE" cond_expr
+
+group_by_clause = "GROUP BY" dimensions
 ```
 
 ### Where Condition Expression
@@ -176,9 +178,13 @@ literal          = string_lit | int_lit | float_lit | bool_lit | regex_lit
 
 ```
 
+### Group By Dimensions
+```
+dimensions       = var_ref { "," var_ref }
+```
+
 #### Examples:
 
 ```sql
-
-SELECT sum(tcp.bytes_in+tcp.bytes_out) AS total_bytes FROM packetbeat WHERE uid = 1 AND tcp.ip = '127.0.0.1'
+SELECT sum(tcp.bytes_in+tcp.bytes_out) AS total_bytes FROM packetbeat WHERE uid = 1 AND tcp.src_ip = '127.0.0.1' GROUP BY tcp.dst_ip
 ```
