@@ -34,6 +34,7 @@ const (
 	SUB // -
 	MUL // *
 	DIV // /
+	MOD // %
 
 	AND // AND
 	OR  // OR
@@ -87,6 +88,7 @@ var tokens = [...]string{
 	SUB: "-",
 	MUL: "*",
 	DIV: "/",
+	MOD: "%",
 
 	AND: "AND",
 	OR:  "OR",
@@ -153,7 +155,7 @@ func (tok Token) Precedence() int {
 		return 4
 	case ADD, SUB:
 		return 5
-	case MUL, DIV:
+	case MUL, DIV, MOD:
 		return 6
 	}
 	return 0

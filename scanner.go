@@ -30,7 +30,7 @@ func (s *Scanner) Scan() (tok Token, pos Pos, lit string) {
 	// as an ident or reserved word.
 	if isWhitespace(ch0) {
 		return s.scanWhitespace()
-	} else if isLetter(ch0) || ch0 == '_' {
+	} else if isLetter(ch0) || ch0 == '_' || ch0 == '@' {
 		s.r.unread()
 		return s.scanIdent(true)
 	} else if isDigit(ch0) {
@@ -58,6 +58,8 @@ func (s *Scanner) Scan() (tok Token, pos Pos, lit string) {
 		return MUL, pos, ""
 	case '/':
 		return DIV, pos, ""
+	case '%':
+		return MOD, pos, ""
 	case '=':
 		if ch1, _ := s.r.read(); ch1 == '~' {
 			return EQREGEX, pos, ""
@@ -282,7 +284,7 @@ func isLetter(ch rune) bool { return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && c
 func isDigit(ch rune) bool { return (ch >= '0' && ch <= '9') }
 
 // isIdentChar returns true if the rune can be used in an unquoted identifier.
-func isIdentChar(ch rune) bool { return isLetter(ch) || isDigit(ch) || ch == '_' }
+func isIdentChar(ch rune) bool { return isLetter(ch) || isDigit(ch) || ch == '_' || ch == '@' }
 
 // isIdentFirstChar returns true if the rune can be used as the first char in an unquoted identifer.
 func isIdentFirstChar(ch rune) bool { return isLetter(ch) || ch == '_' }
@@ -386,9 +388,9 @@ func (r *reader) read() (ch rune, pos Pos) {
 	if err != nil {
 		ch = eof
 	} else if ch == '\r' {
-		if c_h, _, err := r.r.ReadRune(); err != nil {
+		if _ch, _, err := r.r.ReadRune(); err != nil {
 			// nop
-		} else if c_h != '\n' {
+		} else if _ch != '\n' {
 			_ = r.r.UnreadRune()
 		}
 		ch = '\n'
@@ -546,6 +548,7 @@ func IsRegexOp(t Token) bool {
 	return (t == EQREGEX || t == NEQREGEX)
 }
 
+// IsListOp returns true if the operator accepts a list operand.
 func IsListOp(t Token) bool {
 	return (t == IN || t == NI)
 }

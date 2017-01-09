@@ -42,6 +42,7 @@ func TestScanner_Scan(t *testing.T) {
 		{s: `-`, tok: jepl.SUB},
 		{s: `*`, tok: jepl.MUL},
 		{s: `/`, tok: jepl.DIV},
+		{s: `%`, tok: jepl.MOD},
 
 		// Logical operators
 		{s: `AND`, tok: jepl.AND},

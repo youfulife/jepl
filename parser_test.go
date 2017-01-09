@@ -3,11 +3,12 @@ package jepl_test
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/chenyoufu/jepl"
 	"reflect"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/chenyoufu/jepl"
 )
 
 func TestParseGroupBy(t *testing.T) {
